@@ -2,15 +2,35 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Model downloads only. Recognition and inference remain on-device. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
+    <queries>
+        <intent><action android:name="android.speech.RecognitionService" /></intent>
+    </queries>
 
     <application
         android:label="@string/app_name"
         android:icon="@mipmap/ic_launcher"
         android:theme="@style/Theme.Kinetica"
         android:allowBackup="true"
+        android:usesCleartextTraffic="false"
         android:localeConfig="@xml/locales_config"
         tools:targetApi="33">
+
+        <activity android:name=".voice.VoiceDiagnosticsActivity"
+            android:label="@string/voice_diagnostics" android:exported="false" />
+
+        <activity android:name=".voice.CleanupInstructionsActivity"
+            android:label="@string/voice_instructions" android:exported="false" />
+
+        <activity android:name=".voice.VoiceCapitalizationActivity"
+            android:label="@string/voice_protected_capitals" android:exported="false" />
+
+        <activity android:name=".voice.VoiceSetupActivity"
+            android:label="@string/voice_setup" android:exported="false" />
 
         <service
             android:name=".ime.KineticaIME"

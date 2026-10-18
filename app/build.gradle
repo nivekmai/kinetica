@@ -9,6 +9,15 @@ plugins {
 // cannot drift.
 def noticesDir = layout.buildDirectory.dir('generated/notices')
 
+// Optional experimental local cleanup. The ordinary build remains speech-only and has no
+// native toolchain requirement. This property is an explicit, reproducible build input.
+def voiceLlm = providers.gradleProperty('voiceLlm').orNull == 'true'
+def voicePunctuation = providers.gradleProperty('voicePunctuation').orNull == 'true'
+def punctuationDir = rootProject.file('build/voice-punctuation')
+if (voicePunctuation && !new File(punctuationDir, 'assets/punctuation/model.int8.onnx').isFile()) {
+    throw new GradleException('Run python3 tools/voice-smoke/prepare_punctuation.py before building with -PvoicePunctuation=true')
+}
+
 // Release signing is optional: builds stay green without a keystore, and
 // keystore.properties never enters version control.
 def keystoreProps = new Properties()
@@ -26,17 +35,39 @@ android {
     // between two machines has to be fixed in the build script.
     buildToolsVersion '34.0.0'
 
+    if (voiceLlm) {
+        ndkVersion '29.0.14206865'
+        externalNativeBuild {
+            cmake {
+                path file('src/main/cpp/CMakeLists.txt')
+                version '4.1.2'
+            }
+        }
+    }
+
     defaultConfig {
         applicationId "com.kinetica.keyboard"
         minSdk 26
         targetSdk 34
-        versionCode 74
-        versionName "2.0.0"
+        versionCode 89
+        versionName "2.0.15-voice"
+        if (voiceLlm) {
+            ndk { abiFilters 'arm64-v8a' }
+            externalNativeBuild {
+                cmake {
+                    targets 'kinetica_voice'
+                    // Inference must be optimized even in the side-by-side DEV APK.
+                    arguments '-DCMAKE_BUILD_TYPE=Release'
+                }
+            }
+        }
     }
 
     sourceSets {
         main {
             assets.srcDirs += noticesDir
+            java.srcDirs += voicePunctuation ? 'src/punctuation/java' : 'src/noPunctuation/java'
+            if (voicePunctuation) assets.srcDirs += new File(punctuationDir, 'assets')
         }
     }
 
@@ -104,6 +135,7 @@ tasks.register('copyThirdPartyNotices', Copy) {
 preBuild.dependsOn copyThirdPartyNotices
 
 dependencies {
+    if (voicePunctuation) implementation files(new File(punctuationDir, 'sherpa-onnx-1.13.8.aar'))
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.appcompat:appcompat:1.7.0'
     implementation 'androidx.preference:preference-ktx:1.2.1'

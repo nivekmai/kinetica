@@ -19,6 +19,7 @@ object ActionLabels {
         EditorAction.EXPANDIFY -> R.string.chord_kind_expandify
         EditorAction.UNDO -> R.string.action_undo
         EditorAction.REDO -> R.string.action_redo
+        EditorAction.VOICE_TYPING -> R.string.voice_title
         EditorAction.SETTINGS -> R.string.action_settings
         EditorAction.NEXT_LANGUAGE -> R.string.action_next_language
         EditorAction.TOGGLE_AUTOSPACE -> R.string.action_toggle_autospace
@@ -90,7 +91,7 @@ object ActionLabels {
         EditorAction.PAGE_UP -> R.string.notice_page_up
         EditorAction.PAGE_DOWN -> R.string.notice_page_down
         EditorAction.BACKSPACE -> R.string.notice_backspace
-        EditorAction.SETTINGS, EditorAction.NEXT_LANGUAGE, EditorAction.TOGGLE_AUTOSPACE,
+        EditorAction.VOICE_TYPING, EditorAction.SETTINGS, EditorAction.NEXT_LANGUAGE, EditorAction.TOGGLE_AUTOSPACE,
         EditorAction.ONE_HANDED, EditorAction.TOGGLE_NEXT_WORD, EditorAction.TOGGLE_RECENT_WORDS,
         EditorAction.TOGGLE_NUMBER_ROW, EditorAction.TOGGLE_TIDY_SPACES,
         EditorAction.TOGGLE_TYPING_SPEED, EditorAction.TOGGLE_PECK_MODE, EditorAction.CTRL_NEXT,

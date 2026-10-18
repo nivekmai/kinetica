@@ -155,7 +155,7 @@
     <string name="pref_group_spacing_title">Spaziatura</string>
     <string name="pref_group_spacing_summary">Quando arriva uno spazio automatico e quando viene tolto</string>
     <string name="pref_group_typing_title">Scrittura</string>
-    <string name="pref_group_typing_summary">Correzione automatica, maiuscole, spaziatura, barra dei suggerimenti, cosa impara la tastiera</string>
+    <string name="pref_group_typing_summary">Dettatura vocale, correzione automatica, maiuscole, spaziatura, suggerimenti e apprendimento</string>
     <string name="pref_group_gestures_title">Scorciatoie e gesti</string>
     <string name="pref_group_gestures_summary">Accordi, swipe sui tasti, espansioni, trascinamenti</string>
     <string name="pref_home_row_spread_title">Larghezza della riga centrale (%)</string>
@@ -444,7 +444,7 @@
     <string name="pref_alternate_swipes_title">Numeri e simboli con uno swipe</string>
     <string name="pref_alternate_swipes_summary">Uno swipe verso l\'alto su una lettera della riga superiore, o verso il basso su una della riga inferiore, scrive il piccolo carattere del tasto. I tuoi swipe sui tasti hanno la precedenza</string>
     <string name="pref_enter_alternates_title">Simboli scorrendo in su da Invio</string>
-    <string name="pref_enter_alternates_summary">Fino a tre simboli, separati da spazi (predefiniti \"? ! ,\"). Il primo sta sopra Invio e si inserisce scorrendo rapidamente in su; scorri a sinistra per gli altri</string>
+    <string name="pref_enter_alternates_summary">Fino a tre simboli, separati da spazi (predefiniti \"? ! ,\"). Il primo sta sopra Invio e si inserisce scorrendo rapidamente in su; scorri a sinistra per gli altri Sono supportate anche azioni come :voice_typing e :paste.</string>
     <string name="pref_apostrophe_key_title">Tasto apostrofo</string>
     <string name="pref_apostrophe_key_summary">Aggiunge uno stretto tasto apostrofo a destra della L, per scrivere parole contratte ed elise (don\'t, nell\'immagine) senza la pagina dei simboli</string>
     <string name="edge_swipe_settings_title">Swipe sui tasti</string>
@@ -516,4 +516,7 @@
         <item quantity="other">%1$d parole apprese eliminate</item>
         <item quantity="many">%1$d parole apprese eliminate</item>
     </plurals>
+
+    <!-- Voice action: shared by all shortcut pickers. -->
+    <string name="voice_title">Dettatura vocale</string>
 </resources>

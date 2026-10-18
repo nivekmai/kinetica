@@ -455,6 +455,16 @@ class LayoutMutationsTest {
     )
 
     @Test
+    fun voiceTypingCanReplaceEitherPunctuationKeyWithoutLosingItsPunctuationAlternate() {
+        val comma = LayoutMutations.withCommaKey(punctuationLayout(), "voice_typing", "").keys.first { it.id == "comma" }
+        val period = LayoutMutations.withPeriodKey(punctuationLayout(), "voice_typing", "").keys.first { it.id == "period" }
+        assertEquals("action:voice_typing", comma.output)
+        assertEquals("action:voice_typing", period.output)
+        assertTrue("," in comma.alternates)
+        assertTrue("." in period.alternates)
+    }
+
+    @Test
     fun aBlankListLeavesTheLayoutsOwnPunctuation() {
         // The preference defaults to blank so the layout JSON stays the source of truth, and a
         // future layout with different punctuation is not overridden by a global default.

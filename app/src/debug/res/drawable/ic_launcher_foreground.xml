@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- Local voice fork: a microphone, distinct from the upstream swipe artwork. -->
+    <path android:fillColor="#FF54D0FF"
+        android:pathData="M54,27 C47,27 42,32 42,39 L42,53 C42,60 47,65 54,65 C61,65 66,60 66,53 L66,39 C66,32 61,27 54,27 Z" />
+    <path android:fillColor="#00000000" android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="5" android:strokeLineCap="round"
+        android:pathData="M34,51 L34,54 C34,65 43,74 54,74 C65,74 74,65 74,54 L74,51 M54,74 L54,83 M44,83 L64,83" />
+</vector>

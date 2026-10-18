@@ -242,6 +242,7 @@ object LayoutMutations {
             "text" -> custom to custom
             // ISO/IEC 9995-7 paste symbol; select-all has no ISO glyph, a
             // short text label shrinks like any multi-char key label.
+            "voice_typing" -> com.kinetica.keyboard.keys.ActionRow.glyph(EditorAction.VOICE_TYPING) to EditorAction.VOICE_TYPING.output
             "paste" -> "\u2398" to ACTION_PASTE
             "select_all" -> "ALL" to ACTION_SELECT_ALL
             else -> return layout

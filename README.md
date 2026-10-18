@@ -1,5 +1,13 @@
 # Kinetica
 
+Voice-typing development fork of [EZ-eta/kinetica](https://github.com/EZ-eta/kinetica).
+The current experiment combines Android on-device speech recognition with a small
+local punctuation/casing model. Try **Small local model** with **AI cleanup off**;
+the heavier LLM is optional. See [the short architecture and reuse guide](VOICE_QUICKSTART.md)
+or [detailed build notes and phone checks](VOICE_TYPING.md). No upstream PR has been opened.
+The F-Droid and upstream release links below install the original keyboard, without
+this fork's voice features.
+
 [![F-Droid](https://img.shields.io/f-droid/v/com.kinetica.keyboard?logo=fdroid)](https://f-droid.org/packages/com.kinetica.keyboard/)
 [![Latest release](https://img.shields.io/github/v/release/EZ-eta/kinetica?logo=github)](https://github.com/EZ-eta/kinetica/releases/latest)
 [![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue)](LICENSE)
@@ -10,7 +18,7 @@ taps on its own, at the same time as the other, and both streams merge into one 
 successor to the discontinued Nintype (also known as Keyboard69), written from scratch on Android's
 public IME APIs: no fork, no third-party gesture library.
 
-**No network permission.** Nothing you type can leave the phone. Decoding, prediction and learning
+**Local processing.** This voice fork uses Internet only for model downloads requested in setup. Audio and transcripts are not uploaded by the keyboard. Decoding, prediction and learning
 run on the device; password and private fields turn off suggestions, trails and learning.
 
 Typing SOMETHING:
@@ -381,7 +389,7 @@ No trademark is registered or asserted; this is a request for clarity, not a leg
 
 If Kinetica is useful to you, you can [buy me a coffee](https://ko-fi.com/ez_eta).
 
-Entirely optional. The app is free and stays free, has no network permission, shows no ads, and
+Entirely optional. The app is free and stays free, uses network only for requested model downloads, shows no ads, and
 never asks for anything.
 
 ## Contributing

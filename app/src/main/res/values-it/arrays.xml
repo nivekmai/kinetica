@@ -60,6 +60,7 @@
         <item>Testo a scelta</item>
         <item>Incolla</item>
         <item>Seleziona tutto</item>
+        <item>Dettatura vocale</item>
     </string-array>
     <string-array name="autocorrect_entries">
         <item>Spenta</item>

@@ -351,12 +351,12 @@ data class KeyboardConfig(
         }
 
         private val PUNCTUATION_MODES =
-            setOf("keep", "remove", "char", "text", "paste", "select_all")
+            setOf("keep", "remove", "char", "text", "paste", "select_all", "voice_typing")
 
         /**
          * A char/text mode without usable custom content degrades to "keep" (never a blank key),
          * and so do unknown values from stale prefs. Shared by the comma and the period, which
-         * have the same six modes and both default to "keep".
+         * have the same modes and both default to "keep".
          */
         private fun punctuationMode(
             prefs: SharedPreferences,

@@ -109,6 +109,19 @@ class InputContainerView(
         }
     }
 
+    /** Voice controls replace only the suggestion strip, leaving every key visible. */
+    fun showVoiceBar(bar: View) {
+        if (bar.parent == null) addView(bar, indexOfChild(suggestionBar),
+            LayoutParams(LayoutParams.MATCH_PARENT, maxOf(suggestionBar.layoutParams.height,
+                (48 * resources.displayMetrics.density).toInt())))
+        suggestionBar.visibility = GONE
+    }
+
+    fun hideVoiceBar(bar: View) {
+        removeView(bar)
+        suggestionBar.visibility = VISIBLE
+    }
+
     /** Swaps the keyboard for the emoji picker at the keyboard's height. */
     fun showEmojiPicker(picker: View) {
         if (picker.parent == null) {

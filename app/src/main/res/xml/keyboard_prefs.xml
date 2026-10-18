@@ -62,6 +62,14 @@
         android:title="@string/pref_group_typing_title"
         app:singleLineTitle="false"
         android:summary="@string/pref_group_typing_summary">
+        <Preference
+            android:key="pref_voice_setup"
+            android:title="@string/voice_title"
+            app:singleLineTitle="false"
+            android:summary="@string/voice_settings_summary">
+            <intent android:targetPackage="@string/app_pkg"
+                android:targetClass="com.kinetica.keyboard.voice.VoiceSetupActivity" />
+        </Preference>
         <ListPreference
             android:key="pref_autocorrect_level"
             android:title="@string/pref_autocorrect_title"

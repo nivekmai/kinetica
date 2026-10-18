@@ -246,6 +246,7 @@
         <item>Custom text</item>
         <item>Paste</item>
         <item>Select all</item>
+        <item>Voice typing</item>
     </string-array>
     <string-array name="comma_mode_values" translatable="false">
         <item>keep</item>
@@ -254,6 +255,7 @@
         <item>text</item>
         <item>paste</item>
         <item>select_all</item>
+        <item>voice_typing</item>
     </string-array>
 
     <string-array name="autocorrect_entries">

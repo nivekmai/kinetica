@@ -129,6 +129,8 @@ object SettingsSynonyms {
         Prefs.SPACEBAR_WORD_SLIDE to listOf("cursor", "slide", "move", "arrow"),
         Prefs.SPACEBAR_STEP_DP to listOf("cursor", "slide", "speed", "sensitivity"),
 
+        "pref_voice_setup" to listOf("voice", "dictation", "microphone", "mic", "speech", "GGUF", "models", "shortcut", "prompt", "cleanup", "instructions"),
+
         // Rows that open another screen
         "pref_chords" to listOf("shortcut", "expansion", "macro", "abbreviation", "language switch", "peck", "spacebar"),
         "pref_edge_swipes_screen" to listOf("shortcut", "edge", "border", "gesture"),
