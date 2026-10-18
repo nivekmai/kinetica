@@ -14,8 +14,8 @@ import androidx.core.view.setPadding
 import com.kinetica.keyboard.R
 
 /**
- * The project's Ko-fi link. The browser opens it, so the keyboard itself still
- * declares no network permission; with no browser the link is shown to copy.
+ * The project's Ko-fi link opens in a browser, independently of model downloads.
+ * With no browser the link is shown to copy.
  */
 class ContributeActivity : AppCompatActivity() {
 

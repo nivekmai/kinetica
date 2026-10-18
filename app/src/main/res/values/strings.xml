@@ -235,7 +235,7 @@
     <string name="pref_group_spacing_title">Spacing</string>
     <string name="pref_group_spacing_summary">When an automatic space arrives and when it is taken back</string>
     <string name="pref_group_typing_title">Typing</string>
-    <string name="pref_group_typing_summary">Autocorrect, capitals, automatic space, vibration, what the keyboard learns</string>
+    <string name="pref_group_typing_summary">Voice typing, autocorrect, capitals, spacing, suggestions and learning</string>
     <string name="pref_group_gestures_title">Shortcuts and gestures</string>
     <string name="pref_group_gestures_summary">Chords, edge swipes, text expansions, slides</string>
     <string name="pref_group_dictation_title">Voice input</string>
@@ -694,7 +694,7 @@
 
     <string name="pref_enter_alternates_title">Enter slide-up symbols</string>
     <!-- The symbols in quotes are the stored default: keep them. -->
-    <string name="pref_enter_alternates_summary">Up to three symbols, space-separated (default \"? ! ,\"). The first sits above Enter and is inserted by a quick up-slide; slide left for the others</string>
+    <string name="pref_enter_alternates_summary">Up to three symbols, space-separated (default \"? ! ,\"). The first sits above Enter and is inserted by a quick up-slide; slide left for the others Actions such as :voice_typing and :paste also work.</string>
     <string name="pref_enter_alternates_default" translatable="false">\? ! ,</string>
 
     <string name="pref_apostrophe_key_title">Apostrophe key</string>
@@ -767,4 +767,7 @@
     <string name="color_hex_error_bad">%1$s is not a colour: six digits, 0 to 9 or A to F</string>
     <string name="pref_theme_color_title">Custom theme colour</string>
     <string name="pref_theme_color_summary">The colour the custom palette is built from</string>
+
+    <!-- Voice action: shared by all shortcut pickers. -->
+    <string name="voice_title">Voice typing</string>
 </resources>

@@ -1,5 +1,7 @@
 package com.kinetica.keyboard.ime
 
+import com.kinetica.keyboard.R
+import com.kinetica.keyboard.ui.KeyboardTheme
 import android.content.SharedPreferences
 import android.content.res.Configuration
 import android.inputmethodservice.InputMethodService
@@ -134,6 +136,8 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     internal var emojiPicker: EmojiPickerView? = null
     internal var currentGeometry: KeyboardGeometry? = null
         private set
+    internal var voiceSession: com.kinetica.keyboard.voice.VoiceSession? = null
+    private var voiceSelection = -1 to -1
 
     /** The letters of the board on screen: a tap's code is a code of this alphabet. */
     internal val boardAlphabet: Alphabet get() = currentGeometry?.alphabet ?: Alphabet.LATIN
@@ -270,7 +274,15 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         expansions.reloadExpansions()
     }
 
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        if (level == android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW ||
+            level == android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL ||
+            level >= android.content.ComponentCallbacks2.TRIM_MEMORY_BACKGROUND) voiceSession?.trimMemory()
+    }
+
     override fun onDestroy() {
+        closeVoiceTyping()
         prefListener?.let {
             PreferenceManager.getDefaultSharedPreferences(this)
                 .unregisterOnSharedPreferenceChangeListener(it)
@@ -316,6 +328,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     // ------------------------------------------------------------------ views
 
     override fun onCreateInputView(): View {
+        closeVoiceTyping()
         val bar = SuggestionBarView(this)
         bar.listener = suggestionListener
         bar.flickEnabled = true
@@ -346,6 +359,109 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         return container
     }
 
+    override fun onFinishInputView(finishingInput: Boolean) {
+        closeVoiceTyping()
+        super.onFinishInputView(finishingInput)
+    }
+
+    override fun onWindowHidden() {
+        closeVoiceTyping()
+        super.onWindowHidden()
+    }
+
+    internal fun openVoiceTyping() {
+        if (voiceSession != null) return
+        val container = containerView ?: return
+        if (editorState.privateMode || currentInputConnection == null ||
+            currentInputEditorInfo?.inputType == android.text.InputType.TYPE_NULL
+        ) {
+            android.widget.Toast.makeText(this, R.string.voice_private, android.widget.Toast.LENGTH_SHORT).show()
+            return
+        }
+        autospace.cancel()
+        commit.finalizePendingWord()
+        commit.abandonWord()
+        views.closeEmojiPicker()
+        val connection = currentInputConnection ?: return
+        voiceSelection = if (selectionLength() > 0) selStart to selEnd else cursorExpected() to cursorExpected()
+        val initialStart = voiceSelection.first
+        if (initialStart < 0) return
+        val selected = connection.getSelectedText(0)?.toString().orEmpty()
+        val anchor = connection.getTextBeforeCursor(32, 0)?.toString() ?: return
+        val separator = if (selected.isEmpty() && anchor.lastOrNull()?.isLetterOrDigit() == true) " " else ""
+        var rendered = ""
+        val panel = com.kinetica.keyboard.voice.VoicePanel(this)
+        panel.applyTheme(KeyboardTheme.resolve(this, config.themeMode, config.themeColor, config.themeBrightness))
+        val language = when (config.language) {
+            "en" -> if (config.britishSpelling) "en-GB" else "en-US"
+            "no" -> "nb-NO"
+            else -> config.language
+        }
+        val diagnostic = com.kinetica.keyboard.voice.VoiceDiagnostics.startIfArmed(this, mapOf(
+            "editor_package" to currentInputEditorInfo?.packageName, "language" to language,
+            "initial_selection_start" to voiceSelection.first, "initial_selection_end" to voiceSelection.second,
+            "preceding_context" to connection.getTextBeforeCursor(KineticaConstants.VOICE_CONTEXT_CHARS, 0)?.toString(),
+            "selected_text" to selected))
+        voiceSession = com.kinetica.keyboard.voice.VoiceSession(
+            this, panel, language,
+            diagnostic = diagnostic,
+            precedingText = connection.getTextBeforeCursor(KineticaConstants.VOICE_CONTEXT_CHARS, 0)?.toString().orEmpty(),
+            update = update@{ text, source ->
+                fun rejected(reason: String): Boolean {
+                    diagnostic?.event("editor_rejected", "source" to source, "reason" to reason)
+                    return false
+                }
+                if (currentInputConnection !== connection || editorState.privateMode) return@update rejected("connection changed or private field")
+                val next = if (text.isEmpty()) "" else separator +
+                    (if (editorState.multiline) text else text.replace('\n', ' '))
+                if (next == rendered) return@update true
+                diagnostic?.event("editor_requested", "source" to source, "previous" to rendered, "next" to next,
+                    "selection_start" to voiceSelection.first, "selection_end" to voiceSelection.second)
+                val edit = com.kinetica.keyboard.voice.VoiceEdit.between(rendered, next)
+                val readLength = edit.expectedTail.length + anchor.length
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                    val surrounding = connection.getSurroundingText(readLength, 0, 0)
+                    if (surrounding != null && surrounding.offset >= 0 &&
+                        (surrounding.offset + surrounding.selectionStart != voiceSelection.first ||
+                         surrounding.offset + surrounding.selectionEnd != voiceSelection.second)) return@update rejected("cursor moved")
+                }
+                val before = connection.getTextBeforeCursor(readLength, 0)?.toString()
+                val selection = connection.getSelectedText(0)?.toString().orEmpty()
+                if (rendered.isEmpty()) {
+                    if (selection != selected || before?.endsWith(anchor) != true) return@update rejected("initial anchor or selection changed")
+                } else if (selection.isNotEmpty() || !edit.matches(before) ||
+                    (rendered.length < 32 && before?.endsWith(anchor + rendered) != true)) return@update rejected("session text changed outside dictation")
+                // Only replace the verified suffix owned by this session. Never compose or send.
+                connection.beginBatchEdit()
+                val end = initialStart + next.length
+                commitHistory.onEdit(voiceSelection.second,
+                    if (rendered.isEmpty()) selected.length else edit.deleteCount, edit.insert.length)
+                voiceSelection = end to end
+                expectAt(end, end)
+                val deleted = edit.deleteCount == 0 || connection.deleteSurroundingText(edit.deleteCount, 0)
+                val committed = deleted && connection.commitText(edit.insert, 1)
+                connection.endBatchEdit()
+                diagnostic?.event("editor_result", "source" to source, "committed" to committed,
+                    "deleted" to deleted, "delete_count" to edit.deleteCount, "insert" to edit.insert,
+                    "expected" to next, "observed_suffix" to connection.getTextBeforeCursor(minOf(next.length, 6000), 0)?.toString(),
+                    "readback_limit" to 6000, "selection_end" to end)
+                if (committed) rendered = next
+                committed
+            },
+            close = { closeVoiceTyping() },
+        )
+        container.showVoiceBar(panel)
+        voiceSession?.start()
+    }
+
+    private fun closeVoiceTyping() {
+        val session = voiceSession ?: return
+        voiceSession = null
+        session.destroy()
+        updateAutoShift()
+        containerView?.hideVoiceBar(session.panel)
+    }
+
     override fun onEvaluateFullscreenMode(): Boolean = false
 
     override fun onConfigurationChanged(newConfig: Configuration) {
@@ -372,6 +488,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     // ------------------------------------------------------------- lifecycle
 
     override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
+        closeVoiceTyping()
         super.onStartInput(attribute, restarting)
         // Ctrl held for the next key, and Select, belong to the field they were set in.
         if (!restarting) {
@@ -447,6 +564,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     }
 
     override fun onFinishInput() {
+        closeVoiceTyping()
         commit.abandonWord()
         composer?.reset()
         // A notice belongs to the field it was shown in, not to the next one.
@@ -472,6 +590,11 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         // A report is the keyboard's own only when it lands where one of its edits put the
         // cursor; counting reports drifted and swallowed the user's moves.
         val verdict = selectionLedger.judge(newSelStart, newSelEnd, SystemClock.uptimeMillis())
+        if (voiceSession != null) {
+            val position = minOf(newSelStart, newSelEnd) to maxOf(newSelStart, newSelEnd)
+            if (position == voiceSelection || verdict == SelectionLedger.Verdict.OWN) return
+            closeVoiceTyping()
+        }
         if (verdict == SelectionLedger.Verdict.USER) {
             backspace.autocorrectUndo = null
             gestureUndo.forgetCommitted()
@@ -915,6 +1038,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         }
 
         override fun onKeyPressFeedback(key: Key) {
+            closeVoiceTyping()
             autospace.cancel()
             commands.onKeyDown(key.output)
             // Typing resumed: a shortcut row the bar's button brought up gives the words back.

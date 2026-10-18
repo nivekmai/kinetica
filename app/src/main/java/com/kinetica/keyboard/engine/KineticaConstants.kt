@@ -8,6 +8,61 @@ package com.kinetica.keyboard.engine
  * keyboard heights, and layout modes. Time values are milliseconds.
  */
 object KineticaConstants {
+    // Small punctuation runs on partials too; throttle starts without waiting for silence.
+    const val VOICE_PUNCTUATION_INTERVAL_MS = 250L
+    // Leave CPU time for recognition and keyboard interaction.
+    const val VOICE_PUNCTUATION_THREADS = 1
+    // Bound the indicator and reject late output even if a native call stalls.
+    const val VOICE_PUNCTUATION_TIMEOUT_MS = 10000L
+    // Bound a whole editable passage; report the limit rather than silently freezing old words.
+    const val VOICE_PUNCTUATION_CHARS = 6000
+    const val VOICE_PUNCTUATION_CONTEXT_WORDS = 40
+    // Keep any single token below the native tokenizer's 200-subword batch.
+    const val VOICE_PUNCTUATION_WORD_BYTES = 128
+    // Leave room for complete short dictations and instructions, without unbounded KV memory.
+    const val VOICE_LLM_INPUT_TOKENS = 3072
+    const val VOICE_LLM_OUTPUT_TOKENS = 1536
+    // Longer whole-session generations get a bounded 30 seconds; UI also covers queue wait.
+    const val VOICE_LLM_TIMEOUT_MS = 30000L
+    const val VOICE_CLEANUP_UI_TIMEOUT_MS = 35000L
+    // Bound read-only sentence context so most model input remains editable speech.
+    const val VOICE_CONTEXT_CHARS = 240
+    // Keep the entire finalized session editable up to this conservative on-device budget.
+    const val VOICE_CLEANUP_CHARS = 3000
+    const val VOICE_FOLLOWING_CHARS = 120
+    // Leave room for dictated text within the small local cleanup context.
+    const val VOICE_INSTRUCTIONS_MAX_CHARS = 2000
+    // Bound the user-editable casing denylist while allowing hundreds of names.
+    const val VOICE_PROTECTED_WORDS_MAX_CHARS = 8000
+    // Check fidelity in both directions: don't accept a tidy list that drops its introduction.
+    const val VOICE_CLEANUP_WORD_COVERAGE = 0.65
+    // Recognition services accept mono 16-bit PCM at 16 kHz for streamed audio.
+    const val VOICE_SAMPLE_RATE = 16000
+    // Read 32 ms at a time; keep 250 ms in the AudioRecord device buffer.
+    const val VOICE_AUDIO_CHUNK_BYTES = 1024
+    const val VOICE_AUDIO_BUFFER_BYTES = 8000
+    // Yield a blocked pipe without making microphone cancellation depend on its reader.
+    const val VOICE_AUDIO_RETRY_MS = 10L
+    // Bound startup if a provider ignores the supplied audio source.
+    const val VOICE_READY_WAIT_MS = 10000L
+    // Give a speaker room to pause; recognizer services may ignore this hint.
+    const val VOICE_SILENCE_MS = 3500L
+    // Wait for final results after stop/end-of-speech before preserving the last partial.
+    const val VOICE_FINAL_WAIT_MS = 5000L
+    // Avoid rapid retry loops while resuming automatically after each utterance.
+    const val VOICE_RESTART_MS = 250L
+    // Bound one service request, without ending the dictation session.
+    const val VOICE_UTTERANCE_MS = 60000L
+    // Minimum spacing between job starts; inference time counts toward this interval.
+    const val VOICE_CLEANUP_INTERVAL_MS = 3500L
+    // Diagnostic capture is bounded and explicitly armed for one session.
+    const val VOICE_TRACE_MAX_MS = 600000L
+    const val VOICE_TRACE_MAX_BYTES = 64L * 1024 * 1024
+    const val VOICE_TRACE_QUEUE = 256
+    const val VOICE_TRACE_KEEP = 3
+    // Coalesce final callbacks before starting an expensive local cleanup.
+    const val VOICE_CLEANUP_DELAY_MS = 1600L
+
     // Tap vs swipe classification.
     const val TAP_MAX_MS = 150L
     const val TAP_MAX_DISP_DP = 12f

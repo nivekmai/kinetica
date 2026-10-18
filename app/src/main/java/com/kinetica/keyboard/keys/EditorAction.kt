@@ -54,7 +54,9 @@ enum class EditorAction(val output: String) {
     UNDO("${ACTION_PREFIX}undo"),
     REDO("${ACTION_PREFIX}redo"),
 
-    /** Open Kinetica's settings. */
+    /** Start on-device dictation. */
+    VOICE_TYPING("${ACTION_PREFIX}voice_typing"),
+
     SETTINGS("${ACTION_PREFIX}settings"),
 
     /** Next enabled language, in the canonical cycle order. */

@@ -18,8 +18,12 @@ the PR description, with exact steps and the expected result for each.
 
 - **Engine purity.** Nothing under `engine/` imports Android types; that
   is what keeps the golden-decode tests plain JVM tests.
-- **Zero network.** The manifest declares no INTERNET permission and never
-  will. No dependency or feature that needs the network.
+- **Network exception in this local voice fork.** User-requested model downloads
+  use Android DownloadManager and pinned HTTPS artifacts. No audio, transcripts,
+  editor contents or analytics are automatically uploaded. Explicitly armed voice
+  diagnostics may save audio/text locally and export a ZIP through the system
+  document picker at the user's request. Upstream prohibits INTERNET permission;
+  this fork exception requires discussion with maintainers before a PR.
 - **No third-party gesture/prediction libraries.** DTW, trie, resampling,
   and the dual-stream merge are implemented from scratch so every constant
   is understood and tunable. Keep it that way.

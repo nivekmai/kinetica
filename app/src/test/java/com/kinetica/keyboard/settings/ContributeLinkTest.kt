@@ -8,7 +8,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Test
 
-/** The Contribute screen opens its page in the browser, so the app needs no network permission. */
+/** Donation links still open in a browser; the voice fork downloads models explicitly. */
 class ContributeLinkTest {
 
     private fun read(rel: String): String {
@@ -19,9 +19,10 @@ class ContributeLinkTest {
     }
 
     @Test
-    fun theManifestStillDeclaresNoNetworkPermission() {
+    fun modelDownloadForkDeclaresInternetButNoNetworkMonitoring() {
         val manifest = read("app/src/main/AndroidManifest.xml")
-        assertFalse(manifest.contains("android.permission.INTERNET"))
+        assertTrue(manifest.contains("android.permission.INTERNET"))
+        assertTrue(manifest.contains("android:usesCleartextTraffic=\"false\""))
         assertFalse(manifest.contains("ACCESS_NETWORK_STATE"))
     }
 

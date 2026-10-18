@@ -136,7 +136,7 @@ internal class EditorCommands(private val ime: KineticaIME) {
             EditorAction.ARROW_RIGHT, EditorAction.PAGE_UP, EditorAction.PAGE_DOWN,
             EditorAction.BACKSPACE, EditorAction.CTRL_NEXT,
             EditorAction.CASE_LOWER, EditorAction.CASE_TITLE, EditorAction.CASE_UPPER,
-            EditorAction.DICTATE, EditorAction.EMOJI_SEARCH, EditorAction.EDIT_PAGE, EditorAction.SELECT_MODE,
+            EditorAction.VOICE_TYPING, EditorAction.DICTATE, EditorAction.EMOJI_SEARCH, EditorAction.EDIT_PAGE, EditorAction.SELECT_MODE,
             -> null
         }
         if (menuId == null) {
@@ -196,6 +196,7 @@ internal class EditorCommands(private val ime: KineticaIME) {
             EditorAction.CASE_LOWER -> ime.edits.recaseWordInHand(WordCase.LOWER)
             EditorAction.CASE_TITLE -> ime.edits.recaseWordInHand(WordCase.TITLE)
             EditorAction.CASE_UPPER -> ime.edits.recaseWordInHand(WordCase.UPPER)
+            EditorAction.VOICE_TYPING -> ime.openVoiceTyping()
             EditorAction.DICTATE -> startDictation()
             EditorAction.EMOJI_SEARCH -> ime.emojiSearch.toggle("action")
             EditorAction.EDIT_PAGE -> ime.toggleEditPage()

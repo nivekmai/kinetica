@@ -166,6 +166,7 @@ internal class KeyboardViews(private val ime: KineticaIME) {
         )
         kv.theme = theme
         ime.suggestionBar?.theme = theme
+        ime.voiceSession?.panel?.applyTheme(theme)
         ime.containerView?.applyTheme(theme)
         ime.emojiPicker?.theme = theme
         backdrop.refresh(ime.config.backdropStamp, ime.config.nightLook) { applyBackdrop() }

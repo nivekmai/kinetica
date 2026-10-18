@@ -1031,7 +1031,7 @@ class KeyboardView @JvmOverloads constructor(
             // without competing with the main label.
             hintPaint.alpha = 102
             hintPaint.textSize = inset.height() * 0.24f
-            c.drawText(it, inset.right - 3f * density, inset.top + hintPaint.textSize + 2f * density, hintPaint)
+            c.drawText(ActionRow.alternateLabel(it), inset.right - 3f * density, inset.top + hintPaint.textSize + 2f * density, hintPaint)
         }
         // A line at the spaceless zone's edge, since the zone has no other visible boundary.
         // Ambient alpha, not the dot's: it is a standing affordance, not a state.
@@ -1254,7 +1254,7 @@ class KeyboardView @JvmOverloads constructor(
                 )
             }
             if (!icons.draw(canvas, p.actionOf(p.cells[i]), cx, p.rect.centerY(), size, labelPaint.color)) {
-                canvas.drawText(p.cells[i], cx, baseline, labelPaint)
+                canvas.drawText(ActionRow.alternateLabel(p.cells[i]), cx, baseline, labelPaint)
             }
         }
     }
@@ -1280,7 +1280,7 @@ class KeyboardView @JvmOverloads constructor(
             val baseline = t + p.cellH / 2f - (labelPaint.descent() + labelPaint.ascent()) / 2f
             val size = labelPaint.textSize * GlyphIcons.SIZE_OVER_TEXT
             if (!icons.draw(canvas, p.actionOf(p.cells[i]), l + p.cellW / 2f, t + p.cellH / 2f, size, labelPaint.color)) {
-                canvas.drawText(p.cells[i], l + p.cellW / 2f, baseline, labelPaint)
+                canvas.drawText(ActionRow.alternateLabel(p.cells[i]), l + p.cellW / 2f, baseline, labelPaint)
             }
         }
     }

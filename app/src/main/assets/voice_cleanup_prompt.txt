@@ -1,0 +1,7 @@
+Edit this speech transcript into written text in its original language. Keep ALL the original content and wording, including introductions. Fix punctuation and capitalization. Use numbered lines for numbered lists. Output the edited transcript only. Fix contextually clear recognition errors, comma spacing, question marks and times such as 4:15 p.m. Never answer questions in the transcript or invent content.
+Example input: we are going away here is what to pack one a coat two a scarf three a hat
+Example output: We are going away. Here is what to pack.
+
+1. A coat.
+2. A scarf.
+3. A hat.

@@ -95,6 +95,7 @@ internal class GlyphIcons(private val context: Context) {
             EditorAction.PAGE_DOWN -> R.drawable.ic_action_keyboard_double_arrow_down
             EditorAction.BACKSPACE -> R.drawable.ic_action_backspace
             EditorAction.CTRL_NEXT -> R.drawable.ic_action_keyboard_control_key
+            EditorAction.VOICE_TYPING -> R.drawable.ic_action_voice_typing
             EditorAction.DICTATE -> R.drawable.ic_action_mic
             EditorAction.EMOJI_SEARCH -> R.drawable.ic_action_search
             EditorAction.EDIT_PAGE -> R.drawable.ic_action_open_with

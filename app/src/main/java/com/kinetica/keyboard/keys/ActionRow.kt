@@ -30,6 +30,7 @@ object ActionRow {
         EditorAction.UNDO,
         EditorAction.REDO,
         EditorAction.PASTE,
+        EditorAction.VOICE_TYPING,
         EditorAction.COPY,
         EditorAction.CUT,
         EditorAction.SELECT_ALL,
@@ -84,6 +85,7 @@ object ActionRow {
      * keeps the short text label the comma key gives it.
      */
     fun glyph(action: EditorAction): String = when (action) {
+        EditorAction.VOICE_TYPING -> "🎤"
         EditorAction.SETTINGS -> "⚙"          // gear, as the ?123 hold already shows
         EditorAction.NEXT_LANGUAGE -> "⇄"     // paired arrows: swap to the next one
         EditorAction.ONE_HANDED -> "◧"        // square half filled: keys to one side
@@ -156,6 +158,17 @@ object ActionRow {
      * its action, so that cell runs the action and the same symbol typed as text stays text.
      */
     const val ACTION_MARK = '\u2060'
+
+    /** Explicit names work on every key; implicit glyph shortcuts retain their letter-only behavior. */
+    fun actionForToken(text: String): EditorAction? =
+        if (text.startsWith(":")) EditorAction.entries.firstOrNull { it.name.equals(text.drop(1), ignoreCase = true) }
+        else null
+
+    fun actionForAlternate(text: String, isLetter: Boolean): EditorAction? =
+        actionForToken(text) ?: if (isLetter) actionForGlyph(text) else null
+
+    /** Draw the icon but preserve the original named token for dispatch (including ambiguous glyphs). */
+    fun alternateLabel(text: String): String = actionForToken(text)?.let(::glyph) ?: text
 
     /**
      * Actions whose symbol is ordinary text a list may hold (`ALL`, `123`, the French `»`), so a
@@ -284,7 +297,7 @@ object ActionRow {
     fun notice(action: EditorAction, before: KeyboardState): Notice? = when (action) {
         // Settings and voice close the keyboard; a re-case shows in the word itself, the search
         // panel in its own place.
-        EditorAction.SETTINGS, EditorAction.DICTATE, EditorAction.CASE_LOWER, EditorAction.CASE_TITLE,
+        EditorAction.VOICE_TYPING, EditorAction.SETTINGS, EditorAction.DICTATE, EditorAction.CASE_LOWER, EditorAction.CASE_TITLE,
         EditorAction.CASE_UPPER, EditorAction.EMOJI_SEARCH, EditorAction.EDIT_PAGE,
         -> null
         EditorAction.TOGGLE_AUTOSPACE -> Notice.Autospace(!before.autospace)
