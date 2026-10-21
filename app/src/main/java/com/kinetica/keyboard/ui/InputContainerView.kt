@@ -48,6 +48,7 @@ class InputContainerView(
     private val handle = HandleView(context)
     // Plain, showing the window background: empty space below the keys, not chrome.
     private val bottomGap = View(context)
+    private var navigation: View? = null
     private var dragStartRawY = 0f
     private var dragStartHeight = 0
 
@@ -122,6 +123,27 @@ class InputContainerView(
         suggestionBar.visibility = VISIBLE
     }
 
+    /** Same footprint as the keyboard; the blank suggestion strip keeps the editor steady. */
+    fun showNavigation(panel: View) {
+        navigation = panel
+        addView(panel, indexOfChild(keyboardView),
+            LayoutParams(LayoutParams.MATCH_PARENT, keyboardView.layoutParams.height))
+        keyboardView.visibility = GONE
+        suggestionBar.visibility = INVISIBLE
+    }
+
+    fun hideNavigation(panel: View) {
+        removeView(panel)
+        navigation = null
+        keyboardView.visibility = VISIBLE
+        suggestionBar.visibility = VISIBLE
+    }
+
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        navigation?.layoutParams?.height = keyboardView.layoutParams.height
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+    }
+
     /** Swaps the keyboard for the emoji picker at the keyboard's height. */
     fun showEmojiPicker(picker: View) {
         if (picker.parent == null) {
@@ -142,7 +164,7 @@ class InputContainerView(
 
     fun hideEmojiPicker(picker: View?) {
         picker?.visibility = GONE
-        keyboardView.visibility = VISIBLE
+        if (navigation == null) keyboardView.visibility = VISIBLE
     }
 
     @SuppressLint("ClickableViewAccessibility")

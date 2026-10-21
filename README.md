@@ -8,6 +8,10 @@ or [detailed build notes and phone checks](VOICE_TYPING.md). No upstream PR has 
 The F-Droid and upstream release links below install the original keyboard, without
 this fork's voice features.
 
+**Navigation layer:** swipe up on the space bar for a D-pad, word/line jumps,
+selection and clipboard actions. Tap **ABC · Keyboard** to return. See
+[NAVIGATION.md](NAVIGATION.md) for behavior and phone checks.
+
 [![F-Droid](https://img.shields.io/f-droid/v/com.kinetica.keyboard?logo=fdroid)](https://f-droid.org/packages/com.kinetica.keyboard/)
 [![Latest release](https://img.shields.io/github/v/release/EZ-eta/kinetica?logo=github)](https://github.com/EZ-eta/kinetica/releases/latest)
 [![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue)](LICENSE)

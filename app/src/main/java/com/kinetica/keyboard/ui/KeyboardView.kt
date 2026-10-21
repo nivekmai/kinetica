@@ -67,6 +67,9 @@ class KeyboardView @JvmOverloads constructor(
         /** Spacebar slide: one cursor step left (-1) or right (+1), a whole word when [byWord]. */
         fun onCursorMove(direction: Int, byWord: Boolean)
 
+        /** Deliberate upward space swipe, consumed without inserting a space. */
+        fun onNavigationRequested() {}
+
         fun onDeleteChar()
 
         /**
@@ -537,6 +540,9 @@ class KeyboardView @JvmOverloads constructor(
         applyThemePaints()
     }
 
+    /** Stop other thumbs and hold timers before replacing the key surface with a panel. */
+    fun cancelTouchesForPanel() = cancelActivePointers()
+
     fun setKeyboardLayout(l: KeyboardLayout) {
         cancelActivePointers()
         layout = l
@@ -992,7 +998,8 @@ class KeyboardView @JvmOverloads constructor(
                 spaceHoldMoved = false
                 spaceChordFired = false
                 val r = keyRects.getOrNull(keyIdx)
-                spaceController.onDown(x, r?.left ?: 0f, r?.width() ?: 0f)
+                spaceController.onDown(x, r?.left ?: 0f, r?.width() ?: 0f, y,
+                    (keyRects.minOfOrNull { it.width() } ?: width / 10f) * KineticaConstants.NAV_SWIPE_UP_KW)
                 ROUTE_SPACE
             }
             key?.type == KeyType.BACKSPACE && backspacePointer == -1 -> {
@@ -1370,7 +1377,7 @@ class KeyboardView @JvmOverloads constructor(
                 }
                 // After a spacebar chord the touch is spent: it neither slides nor arms again.
                 ROUTE_SPACE -> if (!spaceChordFired) {
-                    spaceController.onMove(x)
+                    spaceController.onMove(x, y)
                     if (spaceController.sliding) spaceHoldMoved = true
                 }
                 ROUTE_BACKSPACE -> backspaceController.onMove(x)
@@ -1441,7 +1448,9 @@ class KeyboardView @JvmOverloads constructor(
                 }
             }
             ROUTE_SPACE -> {
+                if (!spaceChordFired) spaceController.onMove(x, y)
                 if (spaceChordFired) spaceController.consume() else when (spaceController.onUp(t)) {
+                    SpacebarCursorController.Lift.NAVIGATION -> post { if (isShown) listener?.onNavigationRequested() }
                     SpacebarCursorController.Lift.SPACE -> dispatchTap(pid, t)
                     SpacebarCursorController.Lift.SPACELESS -> listener?.onSpacelessSpace()
                     SpacebarCursorController.Lift.DOUBLE -> listener?.onDoubleSpace()
@@ -1574,6 +1583,7 @@ class KeyboardView @JvmOverloads constructor(
     private fun cancelActivePointers() {
         engine?.cancelAll()
         backspaceController.cancel()
+        spaceController.consume()
         cancelHold()
         dismissPopup()
         modeHoldPointer = -1
