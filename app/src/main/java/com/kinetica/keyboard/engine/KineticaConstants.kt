@@ -8,6 +8,12 @@ package com.kinetica.keyboard.engine
  * keyboard heights, and layout modes. Time values are milliseconds.
  */
 object KineticaConstants {
+    // A deliberate upward space swipe opens navigation; horizontal slides keep their route.
+    const val NAV_SWIPE_UP_KW = 0.9f
+    const val NAV_SWIPE_DOMINANCE = 1.25f
+    // Movement repeats after a hold, then at a readable cursor-stepping pace.
+    const val NAV_REPEAT_DELAY_MS = 400L
+    const val NAV_REPEAT_INTERVAL_MS = 70L
     // Small punctuation runs on partials too; throttle starts without waiting for silence.
     const val VOICE_PUNCTUATION_INTERVAL_MS = 250L
     // Leave CPU time for recognition and keyboard interaction.

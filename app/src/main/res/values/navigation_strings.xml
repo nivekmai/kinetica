@@ -1,0 +1,19 @@
+<resources>
+    <string name="nav_line_start">Line start</string>
+    <string name="nav_line_end">Line end</string>
+    <string name="nav_word_left">Word ←</string>
+    <string name="nav_word_right">Word →</string>
+    <string name="nav_up">Up</string>
+    <string name="nav_down">Down</string>
+    <string name="nav_left">Left</string>
+    <string name="nav_right">Right</string>
+    <string name="nav_select">Select</string>
+    <string name="nav_selecting">Selecting</string>
+    <string name="nav_copy">Copy</string>
+    <string name="nav_paste">Paste</string>
+    <string name="nav_cut">Cut</string>
+    <string name="nav_select_all">Select all</string>
+    <string name="nav_undo">Undo</string>
+    <string name="nav_redo">Redo</string>
+    <string name="nav_keyboard">ABC · Keyboard</string>
+</resources>

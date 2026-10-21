@@ -79,6 +79,7 @@ internal class KeyboardViews(private val ime: KineticaIME) {
     fun editPageLayout(): KeyboardLayout = ime.config.editPage.layout()
 
     fun openEmojiPicker() {
+        ime.closeNavigation()
         val container = ime.containerView ?: return
         ime.emojiSearch.close("emoji")
         ime.autospace.cancel()
@@ -167,6 +168,7 @@ internal class KeyboardViews(private val ime: KineticaIME) {
         kv.theme = theme
         ime.suggestionBar?.theme = theme
         ime.voiceSession?.panel?.applyTheme(theme)
+        ime.navigationPanel?.applyTheme(theme)
         ime.containerView?.applyTheme(theme)
         ime.emojiPicker?.theme = theme
         backdrop.refresh(ime.config.backdropStamp, ime.config.nightLook) { applyBackdrop() }

@@ -1,6 +1,7 @@
 package com.kinetica.keyboard.keys
 
 import kotlin.math.abs
+import com.kinetica.keyboard.engine.KineticaConstants
 
 /**
  * Spacebar slide-to-move-cursor. Under 8dp of travel the touch is a plain space tap; past that
@@ -48,12 +49,16 @@ class SpacebarCursorController(
 
     private var lastSpaceAt = 0L
     private var startX = 0f
+    private var startY = 0f
+    private var navigationThreshold = Float.POSITIVE_INFINITY
+    private var verticalMode = false
+    private var navigationReady = false
     private var anchorX = 0f
     private var cursorMode = false
     private var inSpacelessZone = false
 
     /** Whether this touch has become a cursor slide, which ends it as a chord trigger. */
-    val sliding: Boolean get() = cursorMode
+    val sliding: Boolean get() = cursorMode || verticalMode
 
     /**
      * Ends the touch as nothing: a chord used the spacebar as its trigger, so there is no space,
@@ -61,6 +66,8 @@ class SpacebarCursorController(
      */
     fun consume() {
         cursorMode = false
+        verticalMode = false
+        navigationReady = false
         inSpacelessZone = false
         lastSpaceAt = 0L
     }
@@ -70,15 +77,30 @@ class SpacebarCursorController(
      * [x]. Zero width means the caller does not know it, and then no touch is ever in the zone,
      * as with an unconfigured controller.
      */
-    fun onDown(x: Float, keyLeft: Float = 0f, keyWidth: Float = 0f) {
+    fun onDown(x: Float, keyLeft: Float = 0f, keyWidth: Float = 0f,
+               y: Float = 0f, navigationThresholdPx: Float = Float.POSITIVE_INFINITY) {
         startX = x
+        startY = y
+        navigationThreshold = navigationThresholdPx
+        verticalMode = false
+        navigationReady = false
         anchorX = x
         cursorMode = false
         inSpacelessZone =
             spacelessZone && keyWidth > 0f && x < keyLeft + keyWidth * SPACELESS_FRACTION
     }
 
-    fun onMove(x: Float) {
+    fun onMove(x: Float, y: Float = startY) {
+        val up = startY - y
+        // Lock to the first deliberate axis, before horizontal jitter can move the cursor.
+        if (!cursorMode && navigationThreshold.isFinite() &&
+            up >= ENTER_SLIDE_DP * density &&
+            up > abs(x - startX) * KineticaConstants.NAV_SWIPE_DOMINANCE) verticalMode = true
+        if (verticalMode) {
+            navigationReady = up >= navigationThreshold &&
+                up > abs(x - startX) * KineticaConstants.NAV_SWIPE_DOMINANCE
+            return
+        }
         if (!cursorMode && abs(x - startX) >= ENTER_SLIDE_DP * density) {
             cursorMode = true
             anchorX = x
@@ -104,6 +126,8 @@ class SpacebarCursorController(
      */
     fun onUp(nowMs: Long = 0L): Lift {
         val lift = when {
+            navigationReady -> Lift.NAVIGATION
+            verticalMode -> Lift.SLIDE
             cursorMode -> Lift.SLIDE
             inSpacelessZone -> Lift.SPACELESS
             doubleSpacePeriod && lastSpaceAt != 0L && nowMs - lastSpaceAt <= DOUBLE_TAP_MS ->
@@ -118,7 +142,7 @@ class SpacebarCursorController(
     }
 
     /** Outcome of a spacebar touch. */
-    enum class Lift { SPACE, SPACELESS, SLIDE, DOUBLE }
+    enum class Lift { SPACE, SPACELESS, SLIDE, DOUBLE, NAVIGATION }
 
     internal fun effectiveStepDp(): Float = stepDp.coerceIn(ENTER_SLIDE_DP, MAX_STEP_DP)
 

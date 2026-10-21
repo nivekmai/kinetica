@@ -1,0 +1,19 @@
+<resources>
+    <string name="nav_line_start">Inizio riga</string>
+    <string name="nav_line_end">Fine riga</string>
+    <string name="nav_word_left">Parola ←</string>
+    <string name="nav_word_right">Parola →</string>
+    <string name="nav_up">Su</string>
+    <string name="nav_down">Giù</string>
+    <string name="nav_left">Sinistra</string>
+    <string name="nav_right">Destra</string>
+    <string name="nav_select">Seleziona</string>
+    <string name="nav_selecting">Selezione</string>
+    <string name="nav_copy">Copia</string>
+    <string name="nav_paste">Incolla</string>
+    <string name="nav_cut">Taglia</string>
+    <string name="nav_select_all">Seleziona tutto</string>
+    <string name="nav_undo">Annulla</string>
+    <string name="nav_redo">Ripeti</string>
+    <string name="nav_keyboard">ABC · Tastiera</string>
+</resources>

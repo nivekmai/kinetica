@@ -137,6 +137,8 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     internal var currentGeometry: KeyboardGeometry? = null
         private set
     internal var voiceSession: com.kinetica.keyboard.voice.VoiceSession? = null
+    internal var navigationPanel: com.kinetica.keyboard.ui.NavigationPanel? = null
+    private var navigationBack = false
     private var voiceSelection = -1 to -1
 
     /** The letters of the board on screen: a tap's code is a code of this alphabet. */
@@ -328,6 +330,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     // ------------------------------------------------------------------ views
 
     override fun onCreateInputView(): View {
+        closeNavigation()
         closeVoiceTyping()
         val bar = SuggestionBarView(this)
         bar.listener = suggestionListener
@@ -360,16 +363,19 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     }
 
     override fun onFinishInputView(finishingInput: Boolean) {
+        closeNavigation()
         closeVoiceTyping()
         super.onFinishInputView(finishingInput)
     }
 
     override fun onWindowHidden() {
+        closeNavigation()
         closeVoiceTyping()
         super.onWindowHidden()
     }
 
     internal fun openVoiceTyping() {
+        closeNavigation()
         if (voiceSession != null) return
         val container = containerView ?: return
         if (editorState.privateMode || currentInputConnection == null ||
@@ -462,6 +468,61 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         containerView?.hideVoiceBar(session.panel)
     }
 
+    private fun openNavigation() {
+        if (navigationPanel != null || currentInputConnection == null) return
+        val container = containerView ?: return
+        closeVoiceTyping()
+        views.closeEmojiPicker()
+        keyboardView?.cancelTouchesForPanel()
+        autospace.cancel()
+        commit.finalizePendingWord()
+        commit.abandonWord()
+        backspace.autocorrectUndo = null
+        commands.ctrlPending = false
+        val panel = com.kinetica.keyboard.ui.NavigationPanel(this,
+            onMove = { move, selecting ->
+                views.vibrateForKeyPress()
+                autospace.cancel()
+                // Read the connection afresh; modifier bits live on this key pair only.
+                val combo = move.combo(selecting)
+                ich.sendKey(combo.keyCode(), combo.metaState())
+            },
+            onEdit = { action ->
+                views.vibrateForKeyPress()
+                commands.performIfAction(action.output)
+            },
+            onClose = { closeNavigation() })
+        panel.applyTheme(KeyboardTheme.resolve(this, config.themeMode, config.themeColor, config.themeBrightness))
+        navigationPanel = panel
+        container.showNavigation(panel)
+    }
+
+    internal fun closeNavigation() {
+        val panel = navigationPanel ?: return
+        panel.stopRepeating()
+        navigationPanel = null
+        containerView?.hideNavigation(panel)
+        updateAutoShift()
+    }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_BACK && navigationBack && event.repeatCount > 0) return true
+        if (keyCode == KeyEvent.KEYCODE_BACK && navigationPanel != null) {
+            navigationBack = true
+            closeNavigation()
+            return true
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
+    override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_BACK && navigationBack) {
+            navigationBack = false
+            return true
+        }
+        return super.onKeyUp(keyCode, event)
+    }
+
     override fun onEvaluateFullscreenMode(): Boolean = false
 
     override fun onConfigurationChanged(newConfig: Configuration) {
@@ -488,6 +549,8 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     // ------------------------------------------------------------- lifecycle
 
     override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
+        navigationBack = false
+        closeNavigation()
         closeVoiceTyping()
         super.onStartInput(attribute, restarting)
         // Ctrl held for the next key, and Select, belong to the field they were set in.
@@ -564,6 +627,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     }
 
     override fun onFinishInput() {
+        closeNavigation()
         closeVoiceTyping()
         commit.abandonWord()
         composer?.reset()
@@ -594,6 +658,12 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             val position = minOf(newSelStart, newSelEnd) to maxOf(newSelStart, newSelEnd)
             if (position == voiceSelection || verdict == SelectionLedger.Verdict.OWN) return
             closeVoiceTyping()
+        }
+        if (navigationPanel != null) {
+            // Navigation must never reopen a word or schedule autocorrection at each stop.
+            commit.abandonWord()
+            updateAutoShift()
+            return
         }
         if (verdict == SelectionLedger.Verdict.USER) {
             backspace.autocorrectUndo = null
@@ -866,6 +936,8 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             currentGeometry = geometry
             residents.setGeometry(geometry)
         }
+
+        override fun onNavigationRequested() = openNavigation()
 
         override fun onCursorMove(direction: Int, byWord: Boolean) {
             // The query has no cursor, and the field's must not move under the search.

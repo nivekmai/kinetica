@@ -74,6 +74,9 @@ class KeyboardView @JvmOverloads constructor(
         /** Spacebar slide: one cursor step left (-1) or right (+1), a whole word when [byWord]. */
         fun onCursorMove(direction: Int, byWord: Boolean)
 
+        /** Deliberate upward space swipe, consumed without inserting a space. */
+        fun onNavigationRequested() {}
+
         /** One backspace: [tap] true for a tap, false for a tick of the hold's repeat. */
         fun onDeleteChar(tap: Boolean)
 
@@ -803,6 +806,9 @@ class KeyboardView @JvmOverloads constructor(
     /** The name of the board on screen, so an edited symbol page can be put up again in place. */
     val shownBoard: String? get() = layout?.name
 
+    /** Stop other thumbs and hold timers before replacing the key surface with a panel. */
+    fun cancelTouchesForPanel() = cancelActivePointers()
+
     fun setKeyboardLayout(l: KeyboardLayout) {
         cancelActivePointers()
         val before = layout?.name
@@ -1385,7 +1391,8 @@ class KeyboardView @JvmOverloads constructor(
                 spaceHoldMoved = false
                 spaceChordFired = false
                 val r = keyRects.getOrNull(keyIdx)
-                spaceController.onDown(x, r?.left ?: 0f, r?.width() ?: 0f)
+                spaceController.onDown(x, r?.left ?: 0f, r?.width() ?: 0f, y,
+                    (keyRects.minOfOrNull { it.width() } ?: width / 10f) * KineticaConstants.NAV_SWIPE_UP_KW)
                 if (chordLabelsEnabled) {
                     holdHandler.postDelayed(spaceLabelRunnable, maxOf(spaceChordArmMs, SPACE_LABEL_MIN_DELAY_MS))
                 }
@@ -1863,7 +1870,7 @@ class KeyboardView @JvmOverloads constructor(
                 }
                 // After a spacebar chord the touch is spent: it neither slides nor arms again.
                 ROUTE_SPACE -> if (!spaceChordFired && spaceSlideAllowed(spaceLabelsDue, spaceWiggle)) {
-                    spaceController.onMove(x)
+                    spaceController.onMove(x, y)
                     if (spaceController.sliding && !spaceHoldMoved) {
                         spaceHoldMoved = true
                         dropChordLabels(ChordTrigger.SPACE)
@@ -1979,7 +1986,9 @@ class KeyboardView @JvmOverloads constructor(
                 }
             }
             ROUTE_SPACE -> {
+                if (!spaceChordFired) spaceController.onMove(x, y)
                 if (spaceChordFired) spaceController.consume() else when (spaceController.onUp(t)) {
+                    SpacebarCursorController.Lift.NAVIGATION -> post { if (isShown) listener?.onNavigationRequested() }
                     SpacebarCursorController.Lift.SPACE -> dispatchTap(pid, t)
                     SpacebarCursorController.Lift.SPACELESS -> listener?.onSpacelessSpace()
                     SpacebarCursorController.Lift.DOUBLE -> listener?.onDoubleSpace()
@@ -2145,6 +2154,7 @@ class KeyboardView @JvmOverloads constructor(
         keyRepeat.cancel()
         repeatPointer = -1
         repeatKey = null
+        spaceController.consume()
         cancelHold()
         dismissPopup()
         modeHoldPointer = -1

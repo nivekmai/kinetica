@@ -55,6 +55,7 @@ class InputContainerView(
     // Empty space below the keys, not chrome. Painted the keyboard's background in applyTheme:
     // left plain it would show the window's own colour, a band unlike the keys above it.
     private val bottomGap = View(context)
+    private var navigation: View? = null
     private var dragStartRawY = 0f
     private var dragStartHeight = 0
     private var theme: KeyboardTheme? = null
@@ -180,6 +181,27 @@ class InputContainerView(
         suggestionBar.visibility = VISIBLE
     }
 
+    /** Same footprint as the keyboard; the blank suggestion strip keeps the editor steady. */
+    fun showNavigation(panel: View) {
+        navigation = panel
+        addView(panel, indexOfChild(keyboardView),
+            LayoutParams(LayoutParams.MATCH_PARENT, keyboardView.layoutParams.height))
+        keyboardView.visibility = GONE
+        suggestionBar.visibility = INVISIBLE
+    }
+
+    fun hideNavigation(panel: View) {
+        removeView(panel)
+        navigation = null
+        keyboardView.visibility = VISIBLE
+        suggestionBar.visibility = VISIBLE
+    }
+
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        navigation?.layoutParams?.height = keyboardView.layoutParams.height
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+    }
+
     /**
      * Swaps the bar and the keyboard for the emoji picker, the keyboard's height plus [topPx] or
      * the bar's, the taller. The bar has nothing to offer over the grid, and at the search panel's
@@ -201,7 +223,7 @@ class InputContainerView(
         // Only the picker's own swap is undone: under the search panel the bar stays hidden.
         if (picker?.visibility == VISIBLE) suggestionBar.visibility = VISIBLE
         picker?.visibility = GONE
-        keyboardView.visibility = VISIBLE
+        if (navigation == null) keyboardView.visibility = VISIBLE
     }
 
     /**
