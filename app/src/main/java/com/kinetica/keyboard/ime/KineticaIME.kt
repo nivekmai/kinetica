@@ -483,9 +483,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             onMove = { move, selecting ->
                 views.vibrateForKeyPress()
                 autospace.cancel()
-                // Read the connection afresh; modifier bits live on this key pair only.
-                val combo = move.combo(selecting)
-                ich.sendKey(combo.keyCode(), combo.metaState())
+                ich.sendNavigation(move, selecting)
             },
             onEdit = { action ->
                 views.vibrateForKeyPress()

@@ -22,8 +22,9 @@ but inactive. It follows the active theme and keyboard resizing.
 | ABC · Keyboard | Return to typing, retaining the current selection |
 
 Hold a movement button for repeated movement. Releasing, cancelling, dragging
-outside it, or closing the layer stops repetition. Selection adds Shift only to
-each movement key pair; it never leaves a modifier key held in another editor.
+outside it, or closing the layer stops repetition. Selection presses Shift before
+each movement key pair and releases it immediately afterwards, then clears any
+latched Shift state on that same editor connection.
 Clipboard and undo/redo actions switch the selection toggle off. Switching it off
 does not itself remove the editor's highlight; ordinary movement collapses it,
 and typing or pasting replaces it as usual.
@@ -68,6 +69,40 @@ mapping. Actual touch rendering and editor behavior require the phone checks abo
 no emulator test is claimed.
 
 ## Development build
+
+### v18 selection fix
+
+Version `2.0.17-voice-dev` (91). Native-enabled `assembleDebug test lint` passed
+in 2m8s; debug and release each ran 1,195 tests with zero failures/errors and two
+existing skips. Lint has zero errors. The signature matches v17 for in-place upgrade.
+Artifact: `kinetica-dev-v18-selection-fix-arm64.apk` (53,286,144 bytes).
+SHA-256: `6c29457a085fd45626a6e07bab0ee5a3f7f7a4dfe8924eee2cead89873bebcc4`.
+
+The previous build put Shift flags on arrow events without sending Shift presses.
+Android's standard `ArrowKeyMovementMethod` checks Shift state stored in the editor
+buffer, so those flags alone can move the cursor without extending a selection.
+The navigation sender now delivers Shift-down, movement-down/up, Shift-up, and
+explicit Shift-state clearing through a single captured InputConnection. The
+modifier is released after each tap/repeat, including refused movements; exception
+paths also attempt release and clearing. Word jumps retain Ctrl metadata. Plain
+movement and the independent shortcut sender are unchanged.
+
+Evidence: Android's
+[selection-state check](https://github.com/aosp-mirror/platform_frameworks_base/blob/master/core/java/android/text/method/ArrowKeyMovementMethod.java)
+and [modifier-state handling](https://github.com/aosp-mirror/platform_frameworks_base/blob/master/core/java/android/text/method/MetaKeyKeyListener.java).
+Seven JVM regressions cover the old flags-only failure, extension and reversal
+across the anchor, modifier ordering for every movement, Select off, refused
+delivery and release after a connection exception. The editor in these tests is a
+small model of that contract, not an Android UI test.
+
+Phone retest: enable Select, tap Right three times, then Left four times. The
+highlight should grow, shrink, cross the starting point and extend left. Try Up,
+Down, both Word buttons and both Line buttons with Select on. Hold to repeat at
+the document boundary, then turn Select off and type: there should be no lingering
+Shift/capitalization. Repeat in the app where the issue was reported and in a
+standard multiline text field. Physical-device results remain unverified.
+
+### v17 baseline
 
 This is DEV v17, version `2.0.16-voice-dev` (90), with the same package as v16
 (`com.kinetica.keyboard.dev`). The distributed arm64 build retains both optional

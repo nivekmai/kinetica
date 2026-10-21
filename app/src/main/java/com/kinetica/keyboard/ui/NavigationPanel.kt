@@ -12,7 +12,7 @@ import com.kinetica.keyboard.engine.KineticaConstants as K
 import com.kinetica.keyboard.keys.EditorAction
 import com.kinetica.keyboard.keys.NavigationMove
 
-/** A latched editing layer. Selection is a per-event modifier, never a held system Shift key. */
+/** A latched editing layer. Selection brackets each move with Shift, released after the move. */
 class NavigationPanel(
     context: Context,
     private val onMove: (NavigationMove, Boolean) -> Unit,

@@ -5,6 +5,10 @@ import android.view.KeyEvent
 import android.view.inputmethod.ExtractedTextRequest
 import android.view.inputmethod.InputConnection
 import com.kinetica.keyboard.keys.KeyCombo
+import android.view.KeyCharacterMap
+import android.view.InputDevice
+import com.kinetica.keyboard.keys.NavigationKeys
+import com.kinetica.keyboard.keys.NavigationMove
 
 /**
  * All editor mutations go through here. The InputConnection is re-fetched per
@@ -25,6 +29,19 @@ class InputConnectionHelper(private val connection: () -> InputConnection?) {
             ic.sendKeyEvent(KeyEvent(now, now, action, s.keyCode, 0, s.metaState))
         }
         return true
+    }
+
+    /** Modifier presses and releases must reach the same editor, even across a focus change. */
+    fun sendNavigation(move: NavigationMove, selecting: Boolean): Boolean {
+        val ic = connection() ?: return false
+        val downTime = SystemClock.uptimeMillis()
+        return NavigationKeys.send(move.combo(selecting), emit = { stroke ->
+            ic.sendKeyEvent(KeyEvent(downTime, SystemClock.uptimeMillis(), stroke.action,
+                stroke.keyCode, 0, stroke.metaState, KeyCharacterMap.VIRTUAL_KEYBOARD, 0,
+                KeyEvent.FLAG_SOFT_KEYBOARD or KeyEvent.FLAG_KEEP_TOUCH_MODE, InputDevice.SOURCE_KEYBOARD))
+        }, clearShift = {
+            ic.clearMetaKeyStates(KeyEvent.META_SHIFT_ON or KeyEvent.META_SHIFT_LEFT_ON or KeyEvent.META_SHIFT_RIGHT_ON)
+        })
     }
 
     fun deleteBeforeCursor(count: Int): Boolean =
