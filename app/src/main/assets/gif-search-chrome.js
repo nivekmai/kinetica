@@ -22,12 +22,26 @@
         'a[href^="https://accounts.google.com/"], ' +
         '[aria-label="Main menu"], [aria-label="Menu principale"]';
     const containers = 'header, [role="banner"], nav, [role="navigation"], form';
-    const queryFields = 'input[name="q"], textarea[name="q"], input[type="search"]';
+    const queryFields = 'input[name="q"], textarea[name="q"], input[type="search"], ' +
+        '[role="combobox"][aria-haspopup="listbox"], [role="searchbox"]';
     const queryBoundary = 'html, body, main, [role="main"], header, [role="banner"], ' +
         protectedArea;
     const nonQueryContent = protectedArea + ', main, [role="main"], nav, [role="navigation"], ' +
         '[role="tablist"], #logo, #hplogo, #logocont, [aria-label="Google"], img, video, canvas, iframe';
     const original = new Map();
+    const roundedShells = new WeakSet();
+    let updateError = null;
+    function roundedQueryShell(node) {
+        // Mobile query bars can also contain text/icon spans with no button role.
+        // Recognize that painted bar, but never a result, preview or linked card.
+        if (node.matches(nonQueryContent) || node.querySelector(nonQueryContent + ', a[href]')) return false;
+        const css = getComputedStyle(node);
+        if (parseFloat(css.borderTopLeftRadius) < 8 || parseFloat(css.borderTopRightRadius) < 8) return false;
+        const box = node.getBoundingClientRect();
+        // CSS pixels: a compact query row, not a rounded results/gallery container.
+        if (box.width >= 160 && box.height >= 24 && box.height <= 96) roundedShells.add(node);
+        return roundedShells.has(node);
+    }
     function queryShell(field) {
         // Hiding only the input leaves Google's rounded background, magnifier and
         // clear button behind. Follow its query-only wrappers, including wrappers
@@ -47,7 +61,7 @@
         }
         let shell = field;
         for (let parent = field.parentElement; parent; parent = parent.parentElement) {
-            if (parent.matches(queryBoundary) || !queryOnly(parent)) break;
+            if (parent.matches(queryBoundary) || !(queryOnly(parent) || roundedQueryShell(parent))) break;
             shell = parent;
         }
         return shell;
@@ -56,7 +70,8 @@
         if (!node.matches('nav, [role="navigation"]')) return false;
         const types = new Set();
         Array.from(node.querySelectorAll('a[href]')).forEach(link => {
-            const url = new URL(link.href, location.href);
+            let url;
+            try { url = new URL(link.href, location.href); } catch (_) { return; }
             if (url.origin === location.origin && url.pathname === '/search') {
                 types.add(url.searchParams.get('udm') || url.searchParams.get('tbm') || 'all');
             }
@@ -117,13 +132,41 @@
         apply(desired);
     }
     let pending = false;
+    function safeUpdate() {
+        try { update(); updateError = null; }
+        catch (error) { updateError = error instanceof TypeError ? 'TypeError' : 'update_failed'; }
+    }
     function schedule() {
         if (pending) return;
         pending = true;
-        requestAnimationFrame(() => { pending = false; update(); });
+        requestAnimationFrame(() => { pending = false; safeUpdate(); });
     }
     window.__kineticaGifChrome = schedule;
-    update();
+    // Explicit diagnostic export only. No values, text, URLs, labels or page HTML.
+    window.__kineticaGifChromeReport = () => {
+        const describe = node => {
+            const box = node.getBoundingClientRect(), css = getComputedStyle(node);
+            return {tag: node.tagName, role: node.getAttribute('role'),
+                query: node.matches(queryFields), result: node.matches(protectedArea),
+                hiddenByUs: original.get(node)?.has('display') || false,
+                rect: [box.x, box.y, box.width, box.height].map(Math.round),
+                display: css.display, radius: css.borderTopLeftRadius,
+                children: Array.from(node.children).slice(0, 16).map(child => ({tag: child.tagName,
+                    role: child.getAttribute('role'), query: child.matches(queryFields),
+                    result: child.matches(protectedArea)}))};
+        };
+        const fields = Array.from(document.querySelectorAll(queryFields)).slice(0, 8);
+        return {version: 25, allowed: allowedPage(), challenge: !!document.querySelector(challenge), updateError,
+            hidden: original.size, fields: fields.map(field => {
+                const ancestors = [];
+                for (let node = field; node && ancestors.length < 8; node = node.parentElement) ancestors.push(describe(node));
+                return ancestors;
+            }), top: Array.from(document.querySelectorAll('div, form, input, textarea, header'))
+                .filter(node => { const b = node.getBoundingClientRect();
+                    return b.y >= 0 && b.y < 260 && b.width >= 160 && b.height >= 24 && b.height <= 96;
+                }).slice(0, 24).map(describe)};
+    };
+    safeUpdate();
     // Writes are idempotent, so watching style changes cannot create a feedback loop.
     new MutationObserver(schedule).observe(document.documentElement, { childList: true, subtree: true,
         attributes: true, attributeFilter: ['id', 'class', 'name', 'type', 'role', 'style', 'aria-label', 'action', 'href'] });

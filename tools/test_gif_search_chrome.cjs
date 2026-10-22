@@ -139,6 +139,33 @@ const fixture = `<!doctype html><html><head><meta name="viewport" content="width
         });
         await visible('#query-shell', true);
 
+        // Mobile bars may echo the query as plain text and use a plain span for
+        // Clear, preventing a strict query-only traversal. Hide the painted row.
+        const textBar = `<main><div>Google</div>
+            <div id="painted-query" style="border-radius:24px;background:#555;height:48px">
+                <svg width="24" height="24"></svg><div><input name="q" value="PRIVATE_QUERY"></div>
+                <span>PRIVATE_QUERY</span><span>×</span></div>
+            <div data-docid="1" id="kept-result">PRIVATE_RESULT<img width="120" height="120"></div></main>`;
+        await check('https://www.google.com/search?q=PRIVATE_QUERY', textBar);
+        await visible('#painted-query', false); await visible('#kept-result', true);
+        await page.evaluate(script);
+        await visible('#painted-query', false);
+        const report = await page.evaluate(() => window.__kineticaGifChromeReport());
+        assert.equal(report.version, 25);
+        assert.equal(report.updateError, null);
+        assert.equal(report.fields.length, 1);
+        assert.ok(report.fields[0].some(node => node.hiddenByUs));
+        assert.ok(!JSON.stringify(report).includes('PRIVATE_QUERY'));
+        assert.ok(!JSON.stringify(report).includes('PRIVATE_RESULT'));
+        checks += 6;
+        // A rounded card containing a query-looking field still belongs to results.
+        await check('https://www.google.com/search', textBar.replace('id="painted-query"', 'data-docid="2" id="painted-query"'));
+        await visible('#painted-query', true);
+        // A custom query control need not be an input named q.
+        await check('https://www.google.com/search', textBar.replace('<input name="q" value="PRIVATE_QUERY">',
+            '<div role="combobox" aria-haspopup="listbox">PRIVATE_QUERY</div>'));
+        await visible('#painted-query', false); await visible('#kept-result', true);
+
         // Google's CSP may disallow injected style tags. Direct CSSOM changes must
         // still hide controls, and restore the original display on a challenge.
         await check('https://www.google.com/search', fixture.replace('<head>',

@@ -1,4 +1,4 @@
-# Google GIF search (experimental v24)
+# Google GIF search (experimental v25)
 
 Open the emoji picker and tap **GIFs**, or configure **GIFs** in any shortcut picker.
 `:gifs` works in letter/punctuation/Enter alternate lists, like `:paste`.
@@ -12,12 +12,13 @@ Open the emoji picker and tap **GIFs**, or configure **GIFs** in any shortcut pi
 3. After download and validation, tap **Use this GIF**. The browser closes and the
    GIF attaches directly when the original message field regains focus. There is
    no second tap in Recents. The receiving app controls sending the message.
-4. If the field changed, the return took more than 30 seconds, or the app refused
+4. If the field changed, the input did not become ready within 2.5 seconds, or the app refused
    the attachment, a retry message appears. Open GIFs in the original field to
    retry the selected GIF manually.
 
-The sheet keeps Kinetica’s query field and hides Google’s duplicate search input,
-logo, menu, sign-in control and result-type tabs. The native toolbar contains
+The sheet keeps Kinetica’s query field and attempts to hide Google’s duplicate search
+bar and header controls. A remaining logo is acceptable; phone layouts that the
+filter does not recognize can be diagnosed through the report below. The native toolbar contains
 **Search**, **?** (instructions) and **X** (close). Instructions no longer occupy a
 permanent row; progress/errors appear when needed and can be tapped for details.
 The sheet is clamped to available screen space while typing or in a small window.
@@ -79,9 +80,14 @@ The browser cannot call into the IME through JavaScript. Starting search creates
 a memory-only request token bound to the originating package, field ID/name,
 input type, selection and up to 128 characters before/after the cursor. That small
 context stays in memory; it never goes to WebView, URLs, disk or logs. **Use this
-GIF** confirms the request once. On the first return to an external editor, the
-IME consumes the request before attempting attachment. A different destination,
-changed/unreadable context, or return after 30 seconds requires a manual retry.
+GIF** confirms the request once and directly wakes the IME's return check, including
+when the old input session resumes without a new callback. Readiness is checked
+every 100 ms for up to 2.5 seconds: browser focus, no connection, or temporarily
+unreadable context leave the request pending. On a matching readable destination,
+the IME consumes the request before attempting attachment. A different destination,
+changed context, or readiness timeout requires a manual retry. Android 12+ uses
+the editor's atomic surrounding-text/selection snapshot when available, falling
+back to the existing context reads on editors that do not implement it.
 The editor may reuse IDs across empty conversations; this snapshot is an extra
 check, not a universal conversation identifier supplied by Android.
 
@@ -108,6 +114,14 @@ truncated blocks, dimensions/size/frame limits, HTTPS targets, query escaping,
 MIME compatibility, history ordering/deduplication/cap and shortcut dispatch.
 Build/test/lint results and artifact details are recorded after the gate completes.
 No Android device or emulator is attached to this development environment.
+
+If either the duplicate Google query bar or attachment handoff still fails,
+open **GIFs → Search → ? → Copy diagnostics** and paste the report into the bug
+report. It includes bounded in-memory attachment decisions (waiting, destination
+comparison booleans, MIME/connection guards, commit accepted/rejected) and the
+current Google page's structural tags, roles, geometry and hide state. It does
+not collect message text, query values, page text, HTML, image URLs or account
+details. It is copied only on request; nothing is automatically uploaded.
 
 Manual checks required on the Pixel:
 - In Messages, open emoji → GIFs → Google GIF search, search a phrase, open a GIF
@@ -367,3 +381,45 @@ v24 artifact and gate:
   two existing skips. Lint reports zero errors. The packaged query-bar script
   matches the browser-tested source; native LLM and unchanged punctuation model
   remain included. No Android device/emulator test was run.
+
+### v25 return readiness and query-bar diagnostics
+
+Two code paths could lose a confirmed attachment: consuming it during a temporary
+unreadable input connection, and relying entirely on start-input callbacks after
+closing search. Confirmation now triggers a bounded readiness check directly.
+The browser no longer queues a separate hide-IME request while closing, which
+could race the destination's restored keyboard. The commit operation is never
+retried automatically; pending manual retry and all destination checks remain.
+
+The query filter now recognizes compact rounded bars containing non-button text
+or icon spans, and semantic combobox/searchbox controls without `name=q`. This
+covers additional representative cases but is not verification of the phone's
+Google DOM. The new copyable report exposes whether the script was installed,
+whether a challenge suppressed filtering, what query controls were found, which
+ancestors were hidden, and the surviving compact rows. Existing security/source
+page guards and result/preview protection remain.
+
+Phone checks:
+1. Search, select a GIF, confirm Use this GIF: expect one attachment after returning
+   to the original message, both with keys visible and hidden before confirmation.
+2. Repeat after tapping a native search query, after a Google image preview, and
+   after a source-page download. No extra Recents tap should be needed.
+3. Switch to a different input/conversation or modify the destination: no stale
+   attachment. Input restart/hide/show must not attach a second time. A rejected
+   commit must leave the GIF available for manual retry.
+4. If the bar survives or attachment fails, copy diagnostics using the steps above.
+   Verify the report has no message/query text and include it with the screenshot.
+
+v25 artifact and gate:
+- Package `com.kinetica.keyboard.dev`, version `2.0.24-voice-dev`, code 98.
+- `kinetica-dev-v25-gif-return-diagnostics-arm64.apk`, 53,320,464 bytes.
+- SHA-256: `50cc27dad6252f28f17d4687bd5233e8ab020a8420e6c6368392e8e883d2a4bd`.
+- Final `-PvoiceLlm=true -PvoicePunctuation=true assembleDebug test lint --max-workers=4`
+  passed in 1m 31s. Debug/release each report 1,225 tests, zero failures/errors,
+  two existing skips. Lint reports zero errors. The five new regressions cover
+  readiness recovery, notification without a lifecycle callback, bounded waits,
+  different unreadable destinations, and exclusion of editor text from diagnostics.
+- All 73 offline DOM checks pass; v24 fails the added plain-text rounded-bar case.
+  Packaged script matches the tested source. Signature matches v24; native LLM and
+  unchanged punctuation model remain included. No Android device/emulator test
+  was run; the phone's exact Google layout and return lifecycle remain unverified.

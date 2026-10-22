@@ -12,8 +12,8 @@ class GifTransferTest {
     private val target = GifTransfer.Target("messenger", 42, "message", 1, 5, 5, "hello", "")
     private var token: String? = null
 
-    @Before fun reset() { GifTransfer.pending = null }
-    @After fun clear() { GifTransfer.cancelSearch(token); GifTransfer.pending = null }
+    @Before fun reset() { GifTransfer.pending = null; GifTransfer.onAttachmentRequested = null }
+    @After fun clear() { GifTransfer.cancelSearch(token); GifTransfer.pending = null; GifTransfer.onAttachmentRequested = null }
 
     private fun confirm(origin: GifTransfer.Target = target) {
         token = GifTransfer.beginSearch(origin)
@@ -61,9 +61,55 @@ class GifTransferTest {
 
     @Test fun expiredOrUnreadableDestinationRequiresManualRetry() {
         confirm()
-        assertFalse(GifTransfer.takeAttachment(target, 1001 + KineticaConstants.GIF_ATTACH_RETURN_TIMEOUT_MS)!!.attach)
+        assertFalse(GifTransfer.takeAttachment(target, 1001 + KineticaConstants.GIF_ATTACH_READY_TIMEOUT_MS)!!.attach)
         confirm(target.copy(before = null))
-        assertFalse(GifTransfer.takeAttachment(target.copy(before = null), 1100)!!.attach)
+        assertNull(GifTransfer.takeAttachment(target.copy(before = null), 1100))
+        assertFalse(GifTransfer.takeAttachment(target.copy(before = null), 1001 + KineticaConstants.GIF_ATTACH_READY_TIMEOUT_MS)!!.attach)
+    }
+
+    @Test fun unreadableInputDuringReturnDoesNotLoseSelectionBeforeEditorIsReady() {
+        confirm()
+        assertNull(GifTransfer.takeAttachment(null, 1050))
+        assertNull(GifTransfer.takeAttachment(target.copy(before = null, after = null), 1100))
+        assertTrue(GifTransfer.hasAttachmentRequest)
+        assertTrue(GifTransfer.takeAttachment(target, 1200)!!.attach)
+        assertNull(GifTransfer.takeAttachment(target, 1300))
+    }
+
+    @Test fun confirmationWakesExistingInputWithoutANewLifecycleCallback() {
+        var notified = false
+        GifTransfer.onAttachmentRequested = {
+            notified = true
+            assertTrue(GifTransfer.hasAttachmentRequest)
+        }
+        confirm()
+        assertTrue(notified)
+        assertTrue(GifTransfer.takeAttachment(target, 1100)!!.attach)
+    }
+
+    @Test fun missingConnectionOrBrowserFocusEventuallyExpiresRatherThanAttachingLater() {
+        for (browser in listOf(false, true)) {
+            confirm()
+            assertNull(GifTransfer.takeAttachment(null, 1100, browser))
+            assertFalse(GifTransfer.takeAttachment(null, 1001 + KineticaConstants.GIF_ATTACH_READY_TIMEOUT_MS, browser)!!.attach)
+            assertNull(GifTransfer.takeAttachment(target, 4000))
+            assertEquals(selected, GifTransfer.pending)
+        }
+    }
+
+    @Test fun unreadableDifferentDestinationCancelsInsteadOfWaiting() {
+        confirm()
+        assertFalse(GifTransfer.takeAttachment(target.copy(fieldId = 43, before = null), 1100)!!.attach)
+        assertNull(GifTransfer.takeAttachment(target, 1200))
+    }
+
+    @Test fun diagnosticsContainDecisionsButNeverOriginOrReturnText() {
+        confirm(target.copy(before = "PRIVATE_MESSAGE", after = "PRIVATE_SUFFIX"))
+        GifTransfer.takeAttachment(target.copy(before = "OTHER_PRIVATE_MESSAGE"), 1100)
+        val trace = GifDebug.snapshot()
+        assertTrue(trace.contains("destination_mismatch"))
+        assertFalse(trace.contains("PRIVATE_MESSAGE"))
+        assertFalse(trace.contains("PRIVATE_SUFFIX"))
     }
 
     @Test fun anotherExplicitConfirmationCanAttachTheSameGifAgainOnce() {
