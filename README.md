@@ -13,8 +13,8 @@ selection and clipboard actions. Tap **ABC · Keyboard** to return. See
 [NAVIGATION.md](NAVIGATION.md) for behavior and phone checks.
 
 **Experimental Google GIF search:** open emoji → **GIFs**, or configure `:gifs`.
-Choose an original GIF in the Google Images browser, then attach it from the
-keyboard. Accepted attachments appear in Recents. This browser flow takes more
+Choose an original GIF in the Google Images browser and tap **Use this GIF** to
+attach it directly on return to your message. Accepted attachments appear in Recents. This browser flow takes more
 taps than Gboard; see [GIFS.md](GIFS.md) for limitations and phone checks.
 
 [![F-Droid](https://img.shields.io/f-droid/v/com.kinetica.keyboard?logo=fdroid)](https://f-droid.org/packages/com.kinetica.keyboard/)

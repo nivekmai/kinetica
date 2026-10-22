@@ -35,6 +35,10 @@ object KineticaConstants {
     const val GIF_NETWORK_TIMEOUT_MS = 15000
     // Read timeout alone cannot bound a server that slowly sends an endless body.
     const val GIF_TOTAL_TIMEOUT_MS = 60000L
+    // Finish the browser-to-editor handoff promptly; never attach on a much later visit.
+    const val GIF_ATTACH_RETURN_TIMEOUT_MS = 30000L
+    // Bound the memory-only editor snapshot used to reject a changed return destination.
+    const val GIF_EDITOR_CONTEXT_CHARS = 128
 
     // A deliberate upward space swipe opens navigation; horizontal slides keep their route.
     const val NAV_SWIPE_UP_KW = 0.9f

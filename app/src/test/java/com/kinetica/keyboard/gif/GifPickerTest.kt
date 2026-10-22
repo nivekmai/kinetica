@@ -9,6 +9,15 @@ import java.io.File
 class GifPickerTest {
     @get:Rule val temporary = TemporaryFolder()
 
+    @Test fun gifPanelUsesSuggestionSpaceWithoutAddingAnEmptyStripOrMovingTheEditor() {
+        val sizes = com.kinetica.keyboard.settings.KeyboardHeights
+        assertEquals(348, sizes.panelPx(300, 48, includeSuggestions = true))
+        assertEquals(300, sizes.panelPx(300, 48, includeSuggestions = false))
+        // Resizing the keyboard or bar updates the same combined footprint.
+        assertEquals(272, sizes.panelPx(200, 72, includeSuggestions = true))
+        assertEquals(300, sizes.panelPx(300, 0, includeSuggestions = true))
+    }
+
     @Test fun removingOneRecentPersistsWithoutDeletingOthersOrGrantedMedia() {
         val cache = temporary.newFolder("media")
         val index = File(temporary.root, "recents.txt")

@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { chromium } = require('playwright-core');
-const script = fs.readFileSync(path.join(__dirname,
+const script = fs.readFileSync(process.argv[2] || path.join(__dirname,
     '../app/src/main/assets/gif-search-chrome.js'), 'utf8');
 const fixture = `<!doctype html><html><head><meta name="viewport" content="width=device-width"></head><body>
     <div id="gb"><button>Menu</button><a href="https://accounts.google.com/">Sign in</a></div>
@@ -55,7 +55,7 @@ const fixture = `<!doctype html><html><head><meta name="viewport" content="width
         });
         await visible('#gb', false);
         await page.evaluate(script);
-        assert.equal(await page.locator('style').count(), 1); checks++;
+        await visible('#gb', false);
 
         // A header reused inside a result or preview must stop being hidden.
         await page.evaluate(() => document.querySelector('#search').appendChild(document.querySelector('#gb')));
@@ -69,6 +69,29 @@ const fixture = `<!doctype html><html><head><meta name="viewport" content="width
             <main id="content"><header id="kept">A result</header></main>`);
         for (const selector of ['#mobile', '#query', '#types', '#signin']) await visible(selector, false);
         await visible('#kept', true);
+
+        // Mobile layouts wrap both header and results in main. Their type row may
+        // be navigation links rather than a tablist, and the logo can be an SVG.
+        await check('https://www.google.com/search', `<main id="main" role="main">
+            <header id="mobile-header"><svg id="hplogo" aria-label="Google" width="80" height="24"></svg>
+                <form action="https://www.google.com/search"><input name="q" value="reaction GIF"></form></header>
+            <nav id="mobile-types"><a href="/search?q=cats&udm=2">Images</a><a href="/search?q=cats&udm=7">Videos</a></nav>
+            <div id="rso"><header id="mobile-result">Reaction GIFs</header><img width="120" height="120"></div>
+            <div role="dialog"><header id="mobile-preview">Close / Visit</header></div>
+            <nav id="pages"><a href="/search?udm=2&start=10">2</a><a href="/search?udm=2&start=20">3</a></nav></main>`);
+        for (const selector of ['#mobile-header', '#mobile-types']) await visible(selector, false);
+        for (const selector of ['#mobile-result', '#mobile-preview', '#pages']) await visible(selector, true);
+
+        // Google's CSP may disallow injected style tags. Direct CSSOM changes must
+        // still hide controls, and restore the original display on a challenge.
+        await check('https://www.google.com/search', fixture.replace('<head>',
+            '<head><meta http-equiv="Content-Security-Policy" content="style-src \'none\'">'));
+        await visible('#gb', false); await visible('#sfcnt', false);
+        await page.evaluate(() => {
+            const challenge = document.createElement('form'); challenge.id = 'captcha-form';
+            challenge.textContent = 'Verify'; document.body.appendChild(challenge);
+        });
+        await visible('#gb', true); await visible('#sfcnt', true);
 
         // Never hide a container that also contains results.
         await check('https://www.google.com/search', '<header id="gb">Mixed header<main>Results</main></header>');
