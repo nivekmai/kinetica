@@ -581,7 +581,9 @@
     <string name="gif_download_error">Could not download an animated GIF. Open the source website and hold the original GIF, then retry. Maximum size: 15 MB; HTTPS required.</string>
     <string name="gif_use">Use this GIF</string>
     <string name="gif_return_hint">Attach this GIF to your message?</string>
-    <string name="gif_attach_retry">Could not attach automatically. Return to the original message and open GIFs to retry.</string>
+    <string name="gif_attach_retry">Could not attach automatically. Open GIFs to retry. For a report, open Search → ? → Copy diagnostics.</string>
+    <string name="gif_copy_diagnostics">Copy diagnostics</string>
+    <string name="gif_diagnostics_copied">GIF diagnostics copied. Paste them into your bug report.</string>
     <string name="gif_search_expired">This search session has ended. Open GIF search again from your message.</string>
     <string name="gif_rejected">This app did not accept the GIF. Nothing was added to Recents.</string>
     <string name="gif_remove">Remove</string>

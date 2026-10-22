@@ -107,7 +107,7 @@ class GifSearchActivity : Activity() {
         }
         addAction(R.drawable.ic_gif_search, R.string.gif_search_go) { search() }
         addAction(R.drawable.ic_gif_help, R.string.gif_help) {
-            showDetails(getString(R.string.gif_browser_hint), getString(R.string.gif_search))
+            showDetails(getString(R.string.gif_browser_hint), getString(R.string.gif_search), diagnostics = true)
         }
         addAction(R.drawable.ic_gif_close, R.string.gif_close) { finish() }
         layout.addView(controls)
@@ -174,11 +174,32 @@ class GifSearchActivity : Activity() {
         if (GifSearchChrome.isResultsPage(url)) view.evaluateJavascript(chromeScript, null)
     }
 
-    private fun showDetails(message: CharSequence, title: String? = null) {
+    private fun showDetails(message: CharSequence, title: String? = null, diagnostics: Boolean = false) {
         dialog?.dismiss()
-        dialog = AlertDialog.Builder(this).setTitle(title).setMessage(message)
-            .setPositiveButton(android.R.string.ok, null).show()
+        val builder = AlertDialog.Builder(this).setTitle(title).setMessage(message)
+            .setPositiveButton(android.R.string.ok, null)
+        if (diagnostics) builder.setNeutralButton(R.string.gif_copy_diagnostics) { _, _ -> copyDiagnostics() }
+        dialog = builder.show()
         styleDialogButtons()
+    }
+
+    private fun copyDiagnostics() {
+        val decisions = GifDebug.snapshot()
+        val script = """(() => {
+            if (location.protocol !== 'https:' || !['google.com','www.google.com'].includes(location.hostname) ||
+                location.pathname !== '/search') return {page:'not_google_results'};
+            return typeof window.__kineticaGifChromeReport === 'function'
+                ? window.__kineticaGifChromeReport() : {page:'script_not_installed'};
+        })()""".trimIndent()
+        web.evaluateJavascript(script) { result ->
+            if (isFinishing || isDestroyed) return@evaluateJavascript
+            val report = "Kinetica GIF diagnostics v25\nAndroid API ${android.os.Build.VERSION.SDK_INT}; " +
+                "WebView ${WebView.getCurrentWebViewPackage()?.versionName}\nNo message/query text or URLs included.\n\n" +
+                decisions + "\n\nPage structure:\n" + result.orEmpty().take(KineticaConstants.GIF_DEBUG_REPORT_CHARS)
+            (getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager)
+                .setPrimaryClip(android.content.ClipData.newPlainText(getString(R.string.gif_copy_diagnostics), report))
+            android.widget.Toast.makeText(this, R.string.gif_diagnostics_copied, android.widget.Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun styleDialogButtons() {
@@ -187,7 +208,7 @@ class GifSearchActivity : Activity() {
         val textColors = if (color.resourceId != 0) getColorStateList(color.resourceId)
             else android.content.res.ColorStateList.valueOf(color.data)
         // Use the theme's readable primary text, not the saturated accent on dark gray.
-        listOf(AlertDialog.BUTTON_POSITIVE, AlertDialog.BUTTON_NEGATIVE).forEach {
+        listOf(AlertDialog.BUTTON_POSITIVE, AlertDialog.BUTTON_NEGATIVE, AlertDialog.BUTTON_NEUTRAL).forEach {
             dialog?.getButton(it)?.setTextColor(textColors)
         }
     }
@@ -237,8 +258,8 @@ class GifSearchActivity : Activity() {
                             if (GifTransfer.confirmSearch(intent.getStringExtra(SEARCH_TOKEN), id,
                                     android.os.SystemClock.elapsedRealtime())) {
                                 showQueryOnWindowFocus = false
-                                (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager)
-                                    .hideSoftInputFromWindow(query.windowToken, 0)
+                                // Closing the activity restores the destination's focus.
+                                // A separate hide request can race that return and hide its IME.
                                 finish()
                             } else showStatus(R.string.gif_search_expired)
                         }.setNegativeButton(android.R.string.cancel, null).show()

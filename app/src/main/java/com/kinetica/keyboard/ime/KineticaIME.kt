@@ -5,6 +5,7 @@ import com.kinetica.keyboard.gif.GifPolicy
 import com.kinetica.keyboard.gif.GifSearchActivity
 import com.kinetica.keyboard.gif.GifStore
 import com.kinetica.keyboard.gif.GifTransfer
+import com.kinetica.keyboard.gif.GifDebug
 import androidx.core.view.inputmethod.EditorInfoCompat
 import androidx.core.view.inputmethod.InputConnectionCompat
 import androidx.core.view.inputmethod.InputContentInfoCompat
@@ -406,6 +407,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
 
     override fun onCreate() {
         super.onCreate()
+        GifTransfer.onAttachmentRequested = { scheduleGifAttachment() }
         // Decode tracing, developer build only. Two-thumb gestures cannot be reproduced on
         // the JVM, so a capture of the real token buffer is the evidence for them. The
         // release source set's TraceRecorder is a stub that installs nothing.
@@ -496,6 +498,8 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     }
 
     override fun onDestroy() {
+        GifTransfer.onAttachmentRequested = null
+        mainHandler.removeCallbacks(gifAttachmentPoll)
         closeVoiceTyping()
         prefListener?.let {
             PreferenceManager.getDefaultSharedPreferences(this)
@@ -1018,15 +1022,20 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     private fun sendGif(id: String, expectedConnection: android.view.inputmethod.InputConnection): Boolean {
         val connection = currentInputConnection ?: return false
         val info = currentInputEditorInfo ?: return false
-        if (!GifPolicy.canAttach(expectedConnection, connection, editorState.privateMode, EditorInfoCompat.getContentMimeTypes(info))) return false
+        if (!GifPolicy.canAttach(expectedConnection, connection, editorState.privateMode, EditorInfoCompat.getContentMimeTypes(info))) {
+            GifDebug.record("attach_guard; same_connection=${expectedConnection === connection}; private=${editorState.privateMode}; " +
+                "gif_supported=${GifPolicy.acceptsGif(EditorInfoCompat.getContentMimeTypes(info))}")
+            return false
+        }
         val store = GifStore(this)
-        val file = store.file(id) ?: return false
+        val file = store.file(id) ?: run { GifDebug.record("attach_file_missing"); return false }
         val accepted = runCatching {
             val uri = FileProvider.getUriForFile(this, "$packageName.gifs", file)
             InputConnectionCompat.commitContent(connection, info,
                 InputContentInfoCompat(uri, ClipDescription(getString(R.string.gif_title), arrayOf("image/gif")), null),
                 InputConnectionCompat.INPUT_CONTENT_GRANT_READ_URI_PERMISSION, null)
         }.getOrDefault(false)
+        GifDebug.record("commit_content; accepted=$accepted")
         if (accepted) {
             store.touch(id)
             if (!editorState.teachesNothing) runCatching { store.remember(id) }
@@ -1036,25 +1045,57 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         return accepted
     }
 
-    private fun gifEditorTarget(info: EditorInfo, connection: android.view.inputmethod.InputConnection) =
-        GifTransfer.Target(info.packageName.orEmpty(), info.fieldId, info.fieldName, info.inputType,
+    private fun gifEditorTarget(info: EditorInfo, connection: android.view.inputmethod.InputConnection): GifTransfer.Target {
+        // Read selection and context together when supported: initialSelStart can
+        // precede the app's real restored cursor on a returning input session.
+        if (Build.VERSION.SDK_INT >= 31 && selectionLength() <= KineticaConstants.GIF_EDITOR_CONTEXT_CHARS) {
+            val surrounding = runCatching { connection.getSurroundingText(
+                KineticaConstants.GIF_EDITOR_CONTEXT_CHARS, KineticaConstants.GIF_EDITOR_CONTEXT_CHARS, 0) }.getOrNull()
+            if (surrounding != null && surrounding.offset >= 0) {
+                val start = minOf(surrounding.selectionStart, surrounding.selectionEnd)
+                val end = maxOf(surrounding.selectionStart, surrounding.selectionEnd)
+                if (start in 0..surrounding.text.length && end in start..surrounding.text.length) {
+                    return GifTransfer.Target(info.packageName.orEmpty(), info.fieldId, info.fieldName, info.inputType,
+                        surrounding.offset + start, surrounding.offset + end,
+                        surrounding.text.subSequence(0, start).toString().takeLast(KineticaConstants.GIF_EDITOR_CONTEXT_CHARS),
+                        surrounding.text.subSequence(end, surrounding.text.length).toString().take(KineticaConstants.GIF_EDITOR_CONTEXT_CHARS))
+                }
+            }
+        }
+        return GifTransfer.Target(info.packageName.orEmpty(), info.fieldId, info.fieldName, info.inputType,
             selStart, selEnd,
             runCatching { connection.getTextBeforeCursor(KineticaConstants.GIF_EDITOR_CONTEXT_CHARS, 0)?.toString() }.getOrNull(),
             runCatching { connection.getTextAfterCursor(KineticaConstants.GIF_EDITOR_CONTEXT_CHARS, 0)?.toString() }.getOrNull())
+    }
+
+    private val gifAttachmentPoll = object : Runnable {
+        override fun run() {
+            attachGifOnReturn()
+            if (GifTransfer.hasAttachmentRequest) mainHandler.postDelayed(this, KineticaConstants.GIF_ATTACH_POLL_MS)
+        }
+    }
+
+    private fun scheduleGifAttachment() {
+        if (!GifTransfer.hasAttachmentRequest) return
+        mainHandler.removeCallbacks(gifAttachmentPoll)
+        mainHandler.postDelayed(gifAttachmentPoll, KineticaConstants.GIF_ATTACH_POLL_MS)
+    }
 
     private fun attachGifOnReturn() {
         if (!GifTransfer.hasAttachmentRequest) return
-        val info = currentInputEditorInfo ?: return
+        val info = currentInputEditorInfo
+        val connection = currentInputConnection
         // Focus can pass through the search field while its activity is closing.
-        if (info.packageName == packageName) return
-        if (editorState.privateMode) {
+        val browser = info?.packageName == packageName
+        if (!browser && info != null && editorState.privateMode) {
             // Do not read surrounding text from a password field during a stale return.
             GifTransfer.cancelAutomaticAttachment()
+            GifDebug.record("return_private_field")
             return
         }
-        val connection = currentInputConnection ?: return
-        val result = GifTransfer.takeAttachment(gifEditorTarget(info, connection), SystemClock.elapsedRealtime()) ?: return
-        if (!result.attach || !sendGif(result.selection.id, connection)) {
+        val target = if (!browser && info != null && connection != null) gifEditorTarget(info, connection) else null
+        val result = GifTransfer.takeAttachment(target, SystemClock.elapsedRealtime(), browser) ?: return
+        if (!result.attach || connection == null || !sendGif(result.selection.id, connection)) {
             android.widget.Toast.makeText(this, R.string.gif_attach_retry, android.widget.Toast.LENGTH_LONG).show()
         }
     }
@@ -1252,7 +1293,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         updateAutoShift()
         reloadChords()
         reloadEmojiUses()
-        attachGifOnReturn()
+        scheduleGifAttachment()
     }
 
     /** Mirrors the expansion table into memory, on the database thread. */
@@ -1300,7 +1341,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         keyboardView?.setShiftUppercase(shift.isShifted)
         closeEmojiPicker()
         applyViewConfig()
-        attachGifOnReturn()
+        scheduleGifAttachment()
     }
 
     override fun onFinishInput() {

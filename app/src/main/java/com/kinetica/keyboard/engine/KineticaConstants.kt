@@ -35,8 +35,13 @@ object KineticaConstants {
     const val GIF_NETWORK_TIMEOUT_MS = 15000
     // Read timeout alone cannot bound a server that slowly sends an endless body.
     const val GIF_TOTAL_TIMEOUT_MS = 60000L
-    // Finish the browser-to-editor handoff promptly; never attach on a much later visit.
-    const val GIF_ATTACH_RETURN_TIMEOUT_MS = 30000L
+    /** Allow focus/input readiness to settle after closing search, without waiting indefinitely. */
+    const val GIF_ATTACH_READY_TIMEOUT_MS = 2500L
+    /** Poll readiness only; commitContent itself is attempted at most once. */
+    const val GIF_ATTACH_POLL_MS = 100L
+    /** Bound the optional diagnostic report; decisions stay in memory until copied. */
+    const val GIF_DEBUG_EVENTS = 80
+    const val GIF_DEBUG_REPORT_CHARS = 32000
     // Bound the memory-only editor snapshot used to reject a changed return destination.
     const val GIF_EDITOR_CONTEXT_CHARS = 128
 
