@@ -2,6 +2,19 @@ package com.kinetica.keyboard.ime
 
 import com.kinetica.keyboard.R
 import com.kinetica.keyboard.ui.KeyboardTheme
+import com.kinetica.keyboard.gif.GifPanel
+import com.kinetica.keyboard.gif.GifPolicy
+import com.kinetica.keyboard.gif.GifSearchActivity
+import com.kinetica.keyboard.gif.GifStore
+import com.kinetica.keyboard.gif.GifTransfer
+import androidx.core.view.inputmethod.EditorInfoCompat
+import androidx.core.view.inputmethod.InputConnectionCompat
+import androidx.core.view.inputmethod.InputContentInfoCompat
+import androidx.core.content.FileProvider
+import android.content.ClipDescription
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Intent
 import android.content.SharedPreferences
 import android.content.res.Configuration
 import android.inputmethodservice.InputMethodService
@@ -139,6 +152,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     internal var voiceSession: com.kinetica.keyboard.voice.VoiceSession? = null
     internal var navigationPanel: com.kinetica.keyboard.ui.NavigationPanel? = null
     private var navigationBack = false
+    private var gifPanel: GifPanel? = null
     private var voiceSelection = -1 to -1
 
     /** The letters of the board on screen: a tap's code is a code of this alphabet. */
@@ -330,6 +344,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     // ------------------------------------------------------------------ views
 
     override fun onCreateInputView(): View {
+        closeGifs()
         closeNavigation()
         closeVoiceTyping()
         val bar = SuggestionBarView(this)
@@ -363,18 +378,21 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     }
 
     override fun onFinishInputView(finishingInput: Boolean) {
+        closeGifs()
         closeNavigation()
         closeVoiceTyping()
         super.onFinishInputView(finishingInput)
     }
 
     override fun onWindowHidden() {
+        closeGifs()
         closeNavigation()
         closeVoiceTyping()
         super.onWindowHidden()
     }
 
     internal fun openVoiceTyping() {
+        closeGifs()
         closeNavigation()
         if (voiceSession != null) return
         val container = containerView ?: return
@@ -469,6 +487,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     }
 
     private fun openNavigation() {
+        closeGifs()
         if (navigationPanel != null || currentInputConnection == null) return
         val container = containerView ?: return
         closeVoiceTyping()
@@ -505,8 +524,9 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         if (keyCode == KeyEvent.KEYCODE_BACK && navigationBack && event.repeatCount > 0) return true
-        if (keyCode == KeyEvent.KEYCODE_BACK && navigationPanel != null) {
+        if (keyCode == KeyEvent.KEYCODE_BACK && (navigationPanel != null || gifPanel != null)) {
             navigationBack = true
+            closeGifs()
             closeNavigation()
             return true
         }
@@ -519,6 +539,69 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             return true
         }
         return super.onKeyUp(keyCode, event)
+    }
+
+    internal fun closeGifs() {
+        gifPanel?.let { containerView?.hideNavigation(it) }
+        gifPanel = null
+    }
+
+    internal fun openGifs() {
+        closeGifs()
+        closeNavigation()
+        closeVoiceTyping()
+        views.closeEmojiPicker()
+        if (editorState.privateMode) return
+        val connectionAtOpen = currentInputConnection ?: return
+        autospace.cancel()
+        commit.finalizePendingWord()
+        commit.abandonWord()
+        keyboardView?.cancelTouchesForPanel()
+        val info = currentInputEditorInfo ?: return
+        backspace.autocorrectUndo = null
+        commands.ctrlPending = false
+        val store = GifStore(this)
+        val pending = GifTransfer.pending?.takeIf {
+            it.packageName == info.packageName && it.fieldId == info.fieldId && store.file(it.id) != null
+        }
+        val panel = GifPanel(this,
+            KeyboardTheme.resolve(this, config.themeMode, config.themeColor, config.themeBrightness),
+            pending?.id, if (editorState.teachesNothing) emptyList() else store.recents(),
+            GifPolicy.acceptsGif(EditorInfoCompat.getContentMimeTypes(info)),
+            onSearch = {
+                val target = currentInputEditorInfo
+                if (target != null && currentInputConnection === connectionAtOpen && !editorState.privateMode) {
+                    startActivity(Intent(this, GifSearchActivity::class.java)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        .putExtra(GifSearchActivity.TARGET_PACKAGE, target.packageName)
+                        .putExtra(GifSearchActivity.TARGET_FIELD, target.fieldId))
+                }
+            },
+            onSend = { sendGif(it, connectionAtOpen) },
+            onClear = { store.clearHistory(); GifTransfer.pending = null; openGifs() },
+            onClose = { closeGifs() })
+        gifPanel = panel
+        containerView?.showNavigation(panel)
+    }
+
+    private fun sendGif(id: String, expectedConnection: android.view.inputmethod.InputConnection) {
+        val connection = currentInputConnection ?: return
+        val info = currentInputEditorInfo ?: return
+        if (!GifPolicy.canAttach(expectedConnection, connection, editorState.privateMode, EditorInfoCompat.getContentMimeTypes(info))) return
+        val store = GifStore(this)
+        val file = store.file(id) ?: return
+        val accepted = runCatching {
+            val uri = FileProvider.getUriForFile(this, "$packageName.gifs", file)
+            InputConnectionCompat.commitContent(connection, info,
+                InputContentInfoCompat(uri, ClipDescription(getString(R.string.gif_title), arrayOf("image/gif")), null),
+                InputConnectionCompat.INPUT_CONTENT_GRANT_READ_URI_PERMISSION, null)
+        }.getOrDefault(false)
+        if (accepted) {
+            store.touch(id)
+            if (!editorState.teachesNothing) runCatching { store.remember(id) }
+            GifTransfer.pending = null
+            closeGifs()
+        } else android.widget.Toast.makeText(this, R.string.gif_rejected, android.widget.Toast.LENGTH_LONG).show()
     }
 
     override fun onEvaluateFullscreenMode(): Boolean = false
@@ -547,6 +630,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     // ------------------------------------------------------------- lifecycle
 
     override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
+        closeGifs()
         navigationBack = false
         closeNavigation()
         closeVoiceTyping()
@@ -622,9 +706,14 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
                 keyboardView?.setKeyboardLayout(views.alphaLayout())
         }
         views.applyViewConfig()
+        val pending = GifTransfer.pending
+        if (pending != null && pending.packageName == editorInfo?.packageName && pending.fieldId == editorInfo.fieldId) {
+            openGifs()
+        }
     }
 
     override fun onFinishInput() {
+        closeGifs()
         closeNavigation()
         closeVoiceTyping()
         commit.abandonWord()
@@ -657,8 +746,8 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             if (position == voiceSelection || verdict == SelectionLedger.Verdict.OWN) return
             closeVoiceTyping()
         }
-        if (navigationPanel != null) {
-            // Navigation must never reopen a word or schedule autocorrection at each stop.
+        if (navigationPanel != null || gifPanel != null) {
+            // Panel interaction must never reopen a word or schedule autocorrection at each stop.
             commit.abandonWord()
             updateAutoShift()
             return

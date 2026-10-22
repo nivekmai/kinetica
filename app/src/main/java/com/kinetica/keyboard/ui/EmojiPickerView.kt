@@ -21,6 +21,7 @@ class EmojiPickerView(
     private val onBackspace: () -> Unit,
     private val onClose: () -> Unit,
     private val onSearch: () -> Unit,
+    private val onGifs: () -> Unit = {},
 ) : LinearLayout(context) {
 
     private val categories: List<EmojiCatalog.Group>
@@ -101,6 +102,8 @@ class EmojiPickerView(
             footerControl(context.getString(R.string.emoji_back_to_letters)) { onClose() },
             LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f),
         )
+        bottom.addView(footerControl(context.getString(R.string.gif_title)) { onGifs() },
+            LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
         bottom.addView(
             footerControl(context.getString(R.string.emoji_search)) { onSearch() },
             LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f),

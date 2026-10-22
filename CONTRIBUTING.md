@@ -18,7 +18,9 @@ the PR description, with exact steps and the expected result for each.
 
 - **Engine purity.** Nothing under `engine/` imports Android types; that
   is what keeps the golden-decode tests plain JVM tests.
-- **Network exception in this local voice fork.** User-requested model downloads
+- **Network exception in this fork.** Explicit Google GIF searches and user-opened
+  source pages load online in a visible WebView; selected GIFs download over HTTPS.
+  No editor text is used as a search query. User-requested model downloads
   use Android DownloadManager and pinned HTTPS artifacts. No audio, transcripts,
   editor contents or analytics are automatically uploaded. Explicitly armed voice
   diagnostics may save audio/text locally and export a ZIP through the system

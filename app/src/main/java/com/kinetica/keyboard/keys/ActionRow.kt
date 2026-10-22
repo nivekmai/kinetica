@@ -31,6 +31,7 @@ object ActionRow {
         EditorAction.REDO,
         EditorAction.PASTE,
         EditorAction.VOICE_TYPING,
+        EditorAction.GIFS,
         EditorAction.COPY,
         EditorAction.CUT,
         EditorAction.SELECT_ALL,
@@ -86,6 +87,7 @@ object ActionRow {
      */
     fun glyph(action: EditorAction): String = when (action) {
         EditorAction.VOICE_TYPING -> "🎤"
+        EditorAction.GIFS -> "GIF"
         EditorAction.SETTINGS -> "⚙"          // gear, as the ?123 hold already shows
         EditorAction.NEXT_LANGUAGE -> "⇄"     // paired arrows: swap to the next one
         EditorAction.ONE_HANDED -> "◧"        // square half filled: keys to one side
@@ -297,7 +299,7 @@ object ActionRow {
     fun notice(action: EditorAction, before: KeyboardState): Notice? = when (action) {
         // Settings and voice close the keyboard; a re-case shows in the word itself, the search
         // panel in its own place.
-        EditorAction.VOICE_TYPING, EditorAction.SETTINGS, EditorAction.DICTATE, EditorAction.CASE_LOWER, EditorAction.CASE_TITLE,
+        EditorAction.GIFS, EditorAction.VOICE_TYPING, EditorAction.SETTINGS, EditorAction.DICTATE, EditorAction.CASE_LOWER, EditorAction.CASE_TITLE,
         EditorAction.CASE_UPPER, EditorAction.EMOJI_SEARCH, EditorAction.EDIT_PAGE,
         -> null
         EditorAction.TOGGLE_AUTOSPACE -> Notice.Autospace(!before.autospace)

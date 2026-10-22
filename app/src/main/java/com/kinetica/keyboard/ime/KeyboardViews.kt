@@ -79,6 +79,7 @@ internal class KeyboardViews(private val ime: KineticaIME) {
     fun editPageLayout(): KeyboardLayout = ime.config.editPage.layout()
 
     fun openEmojiPicker() {
+        ime.closeGifs()
         ime.closeNavigation()
         val container = ime.containerView ?: return
         ime.emojiSearch.close("emoji")
@@ -94,6 +95,7 @@ internal class KeyboardViews(private val ime: KineticaIME) {
                 onBackspace = { ime.backspace.onKey() },
                 onClose = { closeEmojiPicker() },
                 onSearch = { ime.emojiSearch.open("pane") },
+                onGifs = { ime.openGifs() },
             ).also { ime.emojiPicker = it }
         } catch (e: RuntimeException) {
             Log.w(KineticaIME.TAG, "emoji picker unavailable", e)
