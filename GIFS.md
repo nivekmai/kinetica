@@ -1,4 +1,4 @@
-# Google GIF search (experimental v21)
+# Google GIF search (experimental v22)
 
 Open the emoji picker and tap **GIFs**, or configure **GIFs** in any shortcut picker.
 `:gifs` works in letter/punctuation/Enter alternate lists, like `:paste`.
@@ -22,6 +22,12 @@ permanent row; progress/errors appear when needed and can be tapped for details.
 The sheet is clamped to available screen space while typing or in a small window.
 The picker’s **ABC** button is on the left and **Search** on the right, with wider
 rounded backgrounds and padding around the toolbar.
+
+Text keys are the default when opening a field, including fields that accept GIFs.
+Choosing **Use this GIF** in the browser offers the GIF panel once when returning
+to the originating field. After ABC, Back, hiding/reopening the keyboard, or an
+editor restart, an unsent selection does not keep reopening the panel. It remains
+available at the front of the picker if GIFs is opened manually.
 
 Accepted attachments appear in **Recents**, newest first. Tap one to attach it
 again without another search. Tiles show only the image, without repeated attachment
@@ -222,3 +228,39 @@ current mobile page. Phone verification of Google's actual layout is still neede
   sizing/clamping/overflow and exact search-page URL scoping.
 - Chromium: 37 local DOM checks passed. No Android UI/device test was run; the
   phone checklist above remains required for Google's live mobile layout.
+
+### v22 default-keyboard regression
+
+Previously, every `onStartInputView` treated an unsent browser selection as a new
+request to show GIFs. Returning to text did not clear that trigger. The selection
+now has a separate one-time return offer, consumed before showing the picker;
+retaining the file for manual attachment cannot rearm it. Manual entry also
+acknowledges the offer. Input-view starts restore text even when Android reuses
+the existing input session without another `onStartInput` callback. A missing file,
+private editor, or unsupported MIME type cannot trigger an automatic panel.
+
+Phone checks:
+- Open a GIF-capable message field with no new selection: expect text keys.
+- Choose a GIF in search, return to the message: the picker appears once. Tap ABC,
+  hide/reopen the keyboard, refocus the field and change conversations: expect text.
+- Open GIFs manually: the unsent selected GIF is still first and can be attached.
+- Open GIFs manually, then hide/reopen the keyboard: expect text keys again.
+- Choose another GIF (including the same file): it may offer the picker once again.
+- Search and cancel without choosing: returning to the message must show text.
+
+JVM regressions cover consuming an offer once, capability alone not opening GIFs,
+unrelated editors preserving the intended return, another explicit selection,
+manual acknowledgement, and clearing a selection. Android lifecycle/visibility
+checks still require the phone; no Android UI test was run.
+
+### v22 artifact and automated gate
+
+- Package: `com.kinetica.keyboard.dev`, version `2.0.21-voice-dev`, code 95.
+- APK: `kinetica-dev-v22-gif-default-arm64.apk`, 53,299,808 bytes.
+- SHA-256: `44b43075bc9ccffc7224cf9c3eb6eb9baac997e1a05cd5cd1f845c8738c11d3d`.
+- Signing certificate matches v21; native LLM and unchanged punctuation model
+  remain packaged. This build includes all v21 search-page changes.
+- `-PvoiceLlm=true -PvoicePunctuation=true assembleDebug test lint --max-workers=4`:
+  passed in 2m 16s. Debug and release each ran 1,215 tests, zero failures/errors,
+  two existing skips. Lint has zero errors. The six new return-offer regressions
+  passed in both variants; the Android phone checks above remain manual.

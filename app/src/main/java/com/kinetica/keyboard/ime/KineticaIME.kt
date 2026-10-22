@@ -564,6 +564,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         val pending = GifTransfer.pending?.takeIf {
             it.packageName == info.packageName && it.fieldId == info.fieldId && store.file(it.id) != null
         }
+        if (pending != null) GifTransfer.acknowledgeReturnOffer()
         val panel = GifPanel(this,
             KeyboardTheme.resolve(this, config.themeMode, config.themeColor, config.themeBrightness),
             pending?.id, if (editorState.teachesNothing) emptyList() else store.recents(),
@@ -688,6 +689,9 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     override fun onStartInputView(editorInfo: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(editorInfo, restarting)
         suggestionBar?.endShortcuts()
+        // Showing a hidden keyboard need not call onStartInput. Always restore keys,
+        // unless a newly chosen GIF has a one-time return offer for this editor.
+        closeGifs()
         suggestionBar?.clearSuggestions()
 
         barContents.updateBarWordPending()
@@ -716,8 +720,10 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
                 keyboardView?.setKeyboardLayout(views.alphaLayout())
         }
         views.applyViewConfig()
-        val pending = GifTransfer.pending
-        if (pending != null && pending.packageName == editorInfo?.packageName && pending.fieldId == editorInfo.fieldId) {
+        val pending = GifTransfer.takeReturnOffer(editorInfo?.packageName, editorInfo?.fieldId ?: 0)
+        if (pending != null && editorInfo != null && !editorState.privateMode &&
+            GifPolicy.acceptsGif(EditorInfoCompat.getContentMimeTypes(editorInfo)) &&
+            GifStore(this).file(pending.id) != null) {
             openGifs()
         }
     }

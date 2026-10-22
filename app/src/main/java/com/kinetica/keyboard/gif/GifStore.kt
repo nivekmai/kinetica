@@ -8,12 +8,6 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
 
-/** Pending selection is deliberately memory-only and never inserts automatically. */
-object GifTransfer {
-    data class Pending(val id: String, val packageName: String, val fieldId: Int)
-    var pending: Pending? = null
-}
-
 /** Locally cached media, and a most-recent-first index kept outside Android backup. */
 class GifStore internal constructor(private val directory: File, private val index: File) {
     constructor(context: Context) : this(File(context.cacheDir, "gifs"), File(context.noBackupFilesDir, "gif-recents.txt"))
