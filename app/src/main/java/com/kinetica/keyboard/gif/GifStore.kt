@@ -15,9 +15,9 @@ object GifTransfer {
 }
 
 /** Locally cached media, and a most-recent-first index kept outside Android backup. */
-class GifStore(context: Context) {
-    private val directory = File(context.cacheDir, "gifs").apply { mkdirs() }
-    private val index = File(context.noBackupFilesDir, "gif-recents.txt")
+class GifStore internal constructor(private val directory: File, private val index: File) {
+    constructor(context: Context) : this(File(context.cacheDir, "gifs"), File(context.noBackupFilesDir, "gif-recents.txt"))
+    init { directory.mkdirs() }
     fun file(id: String): File? = if (GifPolicy.fileId(id)) File(directory, "$id.gif").takeIf { it.isFile } else null
 
     fun recents(): List<String> = synchronized(lock) {
@@ -26,11 +26,21 @@ class GifStore(context: Context) {
     }
 
     fun remember(id: String) = synchronized(lock) {
-        if (file(id) != null) index.writeText(GifPolicy.recentIds(recents(), id).joinToString("\n"))
+        if (file(id) != null) writeIndex(GifPolicy.recentIds(recents(), id))
     }
 
-    // Retain files for a day after clearing, so a receiver can finish reading its granted URI.
-    fun clearHistory() = synchronized(lock) { index.delete(); Unit }
+    // Remove only the index entry; a receiving app may still be reading its granted file.
+    fun remove(id: String) = synchronized(lock) {
+        writeIndex(recents().filterNot { it == id })
+    }
+
+    private fun writeIndex(ids: List<String>) {
+        val temporary = File.createTempFile("gif-recents-", ".tmp", index.parentFile)
+        try {
+            temporary.writeText(ids.joinToString("\n"))
+            if (!temporary.renameTo(index)) throw IOException("Cannot save GIF history")
+        } finally { temporary.delete() }
+    }
 
     fun touch(id: String) { file(id)?.setLastModified(System.currentTimeMillis()) }
 

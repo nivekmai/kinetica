@@ -4,4 +4,14 @@
         <item name="colorPrimary">#FF5468FF</item>
         <item name="colorAccent">#FF5468FF</item>
     </style>
+    <!-- Keep the message visible behind a keyboard-height search sheet. -->
+    <style name="Theme.Kinetica.GifSearch" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">true</item>
+        <item name="android:backgroundDimAmount">0.25</item>
+        <item name="android:windowActionModeOverlay">true</item>
+        <item name="colorAccent">#FF5468FF</item>
+    </style>
 </resources>

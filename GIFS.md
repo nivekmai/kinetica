@@ -1,10 +1,12 @@
-# Google GIF search (experimental v19)
+# Google GIF search (experimental v20)
 
 Open the emoji picker and tap **GIFs**, or configure **GIFs** in any shortcut picker.
 `:gifs` works in letter/punctuation/Enter alternate lists, like `:paste`.
 
-1. Tap **Google GIF search**. This opens a visible Google Images browser with its
-   animated-image filter. Enter a query and tap Search.
+1. Tap **Google GIF search**. A bottom sheet opens at the keyboard’s height with
+   Google Images and its animated-image filter. The query field is focused and the
+   typing keyboard opens below the sheet. Enter a query and tap Search; the keys
+   hide, leaving the search sheet at the bottom of the screen.
 2. Tap a result, then hold its full-sized animated image. If the result is a static
    Google thumbnail, visit its source website and hold the original GIF instead.
 3. After download and validation, tap **Use this GIF**. Return to your original
@@ -14,7 +16,10 @@ Open the emoji picker and tap **GIFs**, or configure **GIFs** in any shortcut pi
    field and reopen GIFs.
 
 Accepted attachments appear in **Recents**, newest first. Tap one to attach it
-again without another search. Clear removes the recent list and pending selection.
+again without another search. Tiles show only the image, without repeated attachment
+labels. Long-press a tile, then confirm **Remove** to remove just that GIF. Cancel
+leaves it unchanged; releasing the long press does not attach it. There is no
+clear-all control. Removing a selected, unsent GIF also dismisses that selection.
 History contains up to 30 unique files, survives app restart, and is not included
 in Android backup. Android may evict cached images when storage is low. Password
 fields cannot open this picker; no-learning/incognito fields do not show or record
@@ -87,7 +92,10 @@ Manual checks required on the Pixel:
 - Select a Google thumbnail or video: expect rejection, with guidance to open
   the original GIF. Test a disconnected network and a blocked source site.
 - Attach A, B, A: Recents should show A then B once each. Restart the keyboard,
-  go offline and reuse a recent GIF. Clear should empty the visible history.
+  go offline and reuse a recent GIF. Long-press A → Cancel should retain A/B;
+  long-press A → Remove should leave only B, including after restart. Neither
+  long-press nor confirmation should attach anything. The cached file remains
+  available to receivers that already have its URI.
 - In a no-learning field, attach a GIF and return to a normal field: it should
   not appear in Recents. Password fields must not open the GIF panel.
 - Configure `:gifs` on Enter and a letter alternate, then test both; also test the
@@ -116,3 +124,38 @@ WebView interaction or the destination app’s `commitContent` behavior.
   passed. Debug and release each ran 1,203 tests, zero failures/errors, two existing
   skips. Lint has zero errors. The eight GIF tests cover the policies listed above,
   including stale editor identity. No Android UI/device test was run.
+
+### v20 UX changes and additional phone checks
+
+- Removed the clear-all control and the repeated attachment captions beneath tiles.
+- Long press opens Remove/Cancel confirmation within the picker. Removal is per
+  GIF and persists via an atomic history-index replacement. Unconfirmed presses
+  never modify the index, and confirmed removal does not delete granted media.
+  A tile can still be removed from history in a field that cannot accept GIFs.
+- Search opens as a translucent bottom sheet with the message visible behind it.
+  Initial height comes from the actual keyboard; live keyboard insets update it
+  after resizing/folding/rotation. The sheet is clamped to the usable window.
+  Query focus and keyboard display happen after window focus is obtained.
+- Submit a query: expect the typing keys to hide and the sheet to move down.
+  Return from a GIF preview: the query keyboard should not reopen on its own.
+  Tap the query field to edit again: expect the sheet above the keys. Tap the
+  space above the sheet or Cancel to return to the message.
+- Test folded/unfolded, portrait/landscape and increased text size: the query row
+  should remain reachable and the sheet must not cover system bars or the IME.
+  The instruction/error row uses at most two lines; tap it for the complete text.
+
+The previous user report confirms v19's basic flow worked on their device.
+The v20 focus, insets and long-press interaction still need the phone checks above;
+JVM tests cover persistence, retained media and sizing arithmetic, not Android UI.
+
+### v20 artifact and automated gate
+
+- Package: `com.kinetica.keyboard.dev`, version `2.0.19-voice-dev`, code 93.
+- APK: `kinetica-dev-v20-gif-ux-arm64.apk`, 53,330,548 bytes.
+- SHA-256: `6a769e8bd30b3df77e046faa9a0ce1eced4243819b899acbe3bb0bf610f1f66c`.
+- Signing certificate matches v19; both voice backends remain packaged.
+- `-PvoiceLlm=true -PvoicePunctuation=true assembleDebug test lint --max-workers=4`: passed.
+  Debug and release each ran 1,206 tests, zero failures/errors and two existing skips.
+  Lint has zero errors. New tests cover per-GIF removal persistence, retained
+  recipient media, removal of a pending-only selection and sheet height bounds.
+  Android focus, layout and touch checks remain manual.
