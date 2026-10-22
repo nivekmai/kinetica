@@ -3,9 +3,9 @@
 Open the emoji picker and tap **GIFs**, or configure **GIFs** in any shortcut picker.
 `:gifs` works in letter/punctuation/Enter alternate lists, like `:paste`.
 
-1. Tap **Google GIF search**. A bottom sheet opens at the keyboard’s height with
+1. Tap the **magnifying glass**. A bottom sheet opens at the keyboard’s height with
    Google Images and its animated-image filter. The query field is focused and the
-   typing keyboard opens below the sheet. Enter a query and tap Search; the keys
+   typing keyboard opens below the sheet. Enter a query and tap the magnifying glass; the keys
    hide, leaving the search sheet at the bottom of the screen.
 2. Tap a result, then hold its full-sized animated image. If the result is a static
    Google thumbnail, visit its source website and hold the original GIF instead.
@@ -128,6 +128,15 @@ WebView interaction or the destination app’s `commitContent` behavior.
 ### v20 UX changes and additional phone checks
 
 - Removed the clear-all control and the repeated attachment captions beneath tiles.
+- Search entry and query submission both use a magnifying-glass icon with an
+  accessible Search label. Recents uses RecyclerView/StaggeredGridLayoutManager
+  with three columns and each GIF’s canvas aspect ratio. Extremely wide/tall
+  media keeps a bounded, tappable card while the preview fits without cropping.
+  Metadata is read before displaying cards; bitmap loading cannot shift tile
+  positions. Recycled cells discard old decode callbacks.
+- Test mixed portrait, square and landscape GIFs: expect staggered heights,
+  intact previews and no repeated captions. Scroll away and back, then remove
+  a GIF; expect the clicked item to match the displayed preview.
 - Long press opens Remove/Cancel confirmation within the picker. Removal is per
   GIF and persists via an atomic history-index replacement. Unconfirmed presses
   never modify the index, and confirmed removal does not delete granted media.
@@ -151,11 +160,12 @@ JVM tests cover persistence, retained media and sizing arithmetic, not Android U
 ### v20 artifact and automated gate
 
 - Package: `com.kinetica.keyboard.dev`, version `2.0.19-voice-dev`, code 93.
-- APK: `kinetica-dev-v20-gif-ux-arm64.apk`, 53,330,548 bytes.
-- SHA-256: `6a769e8bd30b3df77e046faa9a0ce1eced4243819b899acbe3bb0bf610f1f66c`.
+- APK: `kinetica-dev-v20-gif-ux-arm64.apk`, 53,296,359 bytes.
+- SHA-256: `9f0809bdde94596d3bcf3eeeacd41c5a63e0c2b8faf0dbbab93d7eb6b66a6e7a`.
 - Signing certificate matches v19; both voice backends remain packaged.
 - `-PvoiceLlm=true -PvoicePunctuation=true assembleDebug test lint --max-workers=4`: passed.
-  Debug and release each ran 1,206 tests, zero failures/errors and two existing skips.
+  Debug and release each ran 1,208 tests, zero failures/errors and two existing skips.
   Lint has zero errors. New tests cover per-GIF removal persistence, retained
-  recipient media, removal of a pending-only selection and sheet height bounds.
-  Android focus, layout and touch checks remain manual.
+  recipient media, removal of a pending-only selection, sheet height bounds,
+  GIF header dimensions and staggered card proportions/limits. Android focus,
+  layout, recycled preview correctness and touch checks remain manual.
