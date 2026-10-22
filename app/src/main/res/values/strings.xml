@@ -584,4 +584,5 @@
     <string name="gif_remove_confirm">Remove this GIF from the picker?</string>
     <string name="gif_remove_error">Could not remove this GIF. Please try again.</string>
     <string name="gif_tile_description">GIF %1$d. Tap to attach; touch and hold to remove.</string>
+    <string name="gif_loading">Loading GIFs…</string>
 </resources>

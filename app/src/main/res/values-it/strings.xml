@@ -542,4 +542,5 @@
     <string name="gif_remove_confirm">Rimuovere questa GIF dal selettore?</string>
     <string name="gif_remove_error">Impossibile rimuovere questa GIF. Riprova.</string>
     <string name="gif_tile_description">GIF %1$d. Tocca per allegare; tieni premuto per rimuovere.</string>
+    <string name="gif_loading">Caricamento GIF…</string>
 </resources>

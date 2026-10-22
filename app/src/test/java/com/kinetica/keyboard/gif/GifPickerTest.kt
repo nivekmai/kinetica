@@ -39,6 +39,24 @@ class GifPickerTest {
         assertNotNull(store.file(pending))
     }
 
+    @Test fun staggeredCardsUseGifDimensionsBeforeBitmapDecoding() {
+        val landscape = byteArrayOf(71, 73, 70, 56, 57, 97, -112, 1, -56, 0)
+        assertEquals(400 to 200, GifTileSizing.dimensions(landscape))
+        assertNull(GifTileSizing.dimensions(landscape.copyOf(9)))
+        assertNull(GifTileSizing.dimensions("not a GIF!".toByteArray()))
+        assertNull(GifTileSizing.dimensions(landscape.clone().apply { this[6] = 0; this[7] = 0 }))
+        assertEquals(60, GifTileSizing.height(120, 400, 200, 48))
+        assertEquals(120, GifTileSizing.height(120, 200, 200, 48))
+        assertEquals(240, GifTileSizing.height(120, 200, 400, 48))
+    }
+
+    @Test fun extremeGifShapesStayTappableAndDoNotFillTheWholeScrollRange() {
+        assertEquals(48, GifTileSizing.height(120, 2048, 1, 48))
+        assertEquals(360, GifTileSizing.height(120, 1, 2048, 48))
+        assertEquals(120, GifTileSizing.height(120, 0, 0, 48))
+        assertTrue(GifTileSizing.height(Int.MAX_VALUE, 1, 2048, 48) > 0)
+    }
+
     @Test fun keyboardHeightSearchSheetClampsOnRotationAndSmallWindows() {
         assertEquals(360, GifSheetSizing.height(360, 900))
         assertEquals(180, GifSheetSizing.height(360, 180))

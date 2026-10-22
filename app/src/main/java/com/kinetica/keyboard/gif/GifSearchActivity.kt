@@ -92,7 +92,8 @@ class GifSearchActivity : Activity() {
             }
         }
         controls.addView(query, LinearLayout.LayoutParams(0, -2, 1f))
-        controls.addView(Button(this).apply { setText(R.string.gif_search_go); setOnClickListener { search() } })
+        controls.addView(GifSearchButton(this) { search() },
+            LinearLayout.LayoutParams((48 * resources.displayMetrics.density).toInt(), (48 * resources.displayMetrics.density).toInt()))
         controls.addView(Button(this).apply { setText(android.R.string.cancel); setOnClickListener { finish() } })
         layout.addView(controls)
         status = TextView(this).apply {

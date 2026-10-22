@@ -13,6 +13,11 @@ object KineticaConstants {
     const val GIF_MAX_DIMENSION = 2048
     const val GIF_MAX_FRAMES = 1000
     const val GIF_RECENTS = 30
+    // Keep the picker dense, with bounded extreme panoramas/portraits and tappable cells.
+    const val GIF_GRID_COLUMNS = 3
+    const val GIF_TILE_MIN_HEIGHT_DP = 48
+    const val GIF_TILE_MAX_HEIGHT_RATIO = 3
+    const val GIF_TILE_GAP_DP = 2
     // Used only when a launch has no measured keyboard height yet.
     const val GIF_SHEET_DEFAULT_DP = 300
     const val GIF_CACHE_BYTES = 200L * 1024 * 1024
