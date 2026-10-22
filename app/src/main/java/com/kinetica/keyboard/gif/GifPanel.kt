@@ -45,13 +45,17 @@ class GifPanel(
             isClickable = true; isFocusable = true
             setOnClickListener { callback() }
         }
-        row.setBackgroundColor(theme.keySpecial)
-        row.addView(GifSearchButton(context, onSearch).apply {
-            imageTintList = ColorStateList.valueOf(theme.keyText)
-            setBackgroundColor(theme.keySpecial)
-        }, LayoutParams(dp(48), dp(48)))
+        val outer = dp(KineticaConstants.GIF_TOOLBAR_PADDING_DP)
+        row.setPadding(outer, outer, outer, outer)
+        row.gravity = Gravity.CENTER_VERTICAL
+        row.addView(button(R.string.emoji_back_to_letters, onClose).apply {
+            GifActionStyle.apply(this, theme.keySpecial, theme.keyText)
+        }, LayoutParams(dp(KineticaConstants.GIF_ACTION_WIDTH_DP), dp(KineticaConstants.GIF_ACTION_HEIGHT_DP)))
         row.addView(android.view.View(context), LayoutParams(0, 1, 1f))
-        row.addView(button(R.string.emoji_back_to_letters, onClose), LayoutParams(-2, dp(48)))
+        row.addView(GifIconButton(context, onClick = onSearch).apply {
+            imageTintList = ColorStateList.valueOf(theme.keyText)
+            GifActionStyle.apply(this, theme.keySpecial, theme.keyText)
+        }, LayoutParams(dp(KineticaConstants.GIF_ACTION_WIDTH_DP), dp(KineticaConstants.GIF_ACTION_HEIGHT_DP)))
         addView(row)
         addView(TextView(context).apply {
             setText(if (!supported) R.string.gif_unsupported else if (pending != null) R.string.gif_ready else R.string.gif_recents)

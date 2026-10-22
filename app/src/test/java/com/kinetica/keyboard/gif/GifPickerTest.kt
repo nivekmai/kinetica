@@ -57,9 +57,11 @@ class GifPickerTest {
         assertTrue(GifTileSizing.height(Int.MAX_VALUE, 1, 2048, 48) > 0)
     }
 
-    @Test fun keyboardHeightSearchSheetClampsOnRotationAndSmallWindows() {
-        assertEquals(360, GifSheetSizing.height(360, 900))
+    @Test fun searchSheetUsesOneAndAHalfKeyboardHeightsAndClampsToAvailableSpace() {
+        assertEquals(540, GifSheetSizing.height(360, 900))
+        assertEquals(540, GifSheetSizing.height(360, 600))
         assertEquals(180, GifSheetSizing.height(360, 180))
+        assertEquals(Int.MAX_VALUE, GifSheetSizing.height(Int.MAX_VALUE, Int.MAX_VALUE))
         assertEquals(1, GifSheetSizing.height(360, 0))
         assertEquals(1, GifSheetSizing.height(-1, 100))
         assertEquals(1, GifSheetSizing.height(0, -40))
