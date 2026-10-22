@@ -1,4 +1,4 @@
-# Google GIF search (experimental v23)
+# Google GIF search (experimental v24)
 
 Open the emoji picker and tap **GIFs**, or configure **GIFs** in any shortcut picker.
 `:gifs` works in letter/punctuation/Enter alternate lists, like `:paste`.
@@ -327,3 +327,43 @@ require the phone checks above. No Android device or emulator test was run.
   changed/unreadable editors, expiry, cancellation, and retained manual retries.
 - Browser: all 46 local DOM checks passed. The v22 script fails the added mobile
   main-wrapper regression. This does not replace the live Pixel checks above.
+
+### v24 query-bar container fix
+
+The v23 phone screenshot still shows an empty rounded Google query bar with its
+magnifier and clear icon. Hiding the query field or form alone can leave those
+outer wrappers visible. The presentation script now follows each query field to
+its outermost query-only container and hides that container as a whole, including
+wrappers outside the form. It uses DOM structure rather than generated class
+names or dimensions that disappear once an element is hidden. It stops at page
+regions, results, preview dialogs, links, media and unrelated text. A results
+region can enclose the query bar without protecting the bar itself.
+
+This update focuses on the query bar; a remaining Google logo is acceptable.
+Native search controls, result cards, attachment behavior and keyboard sizing
+are unchanged. Late wrappers are handled and original styles are restored if a
+container acquires result content or a security challenge appears.
+
+Browser regressions: 61 offline DOM checks pass. The saved v23 script fails the
+new rounded-container fixture. A live mobile Chromium request from this network
+still redirects to Google's traffic challenge, so these fixtures do not prove
+that the exact DOM on the phone is covered.
+
+Phone checks:
+1. Open GIF search: the native query input remains usable; Google's rounded query
+   bar, magnifier and clear icon should disappear together with no blank strip.
+   The logo may remain. Results must still be visible and scrollable.
+2. Search again using the native input, then go Back: a replacement bar should
+   also disappear. Check folded/unfolded layouts.
+3. Open a GIF preview and source page: their controls must remain usable. Confirm
+   Use this GIF still attaches directly to the original composer.
+
+v24 artifact and gate:
+- Package `com.kinetica.keyboard.dev`, version `2.0.23-voice-dev`, code 97.
+- `kinetica-dev-v24-gif-search-bar-arm64.apk`, 53,302,156 bytes.
+- SHA-256: `f15baa479ecc84fbe8955cf2de0226a115db70b909a42d5c12587e516dd23d5c`.
+- `-PvoiceLlm=true -PvoicePunctuation=true assembleDebug test lint --max-workers=4`
+  passed in 52 seconds. Debug/release each report 1,220 tests, zero failures/errors,
+  two existing skips. Lint reports zero errors. The packaged query-bar script
+  matches the browser-tested source; native LLM and unchanged punctuation model
+  remain included. No Android device/emulator test was run.
