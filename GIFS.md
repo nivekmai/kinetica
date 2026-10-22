@@ -1,9 +1,9 @@
-# Google GIF search (experimental v20)
+# Google GIF search (experimental v21)
 
 Open the emoji picker and tap **GIFs**, or configure **GIFs** in any shortcut picker.
 `:gifs` works in letter/punctuation/Enter alternate lists, like `:paste`.
 
-1. Tap the **magnifying glass**. A bottom sheet opens at the keyboard’s height with
+1. Tap the **magnifying glass** on the right. A bottom sheet opens at 150% of the keyboard’s height with
    Google Images and its animated-image filter. The query field is focused and the
    typing keyboard opens below the sheet. Enter a query and tap the magnifying glass; the keys
    hide, leaving the search sheet at the bottom of the screen.
@@ -14,6 +14,14 @@ Open the emoji picker and tap **GIFs**, or configure **GIFs** in any shortcut pi
 4. Tap the selected GIF in the keyboard to attach it. The messaging app still
    controls sending the message. If the keyboard did not reopen, tap the message
    field and reopen GIFs.
+
+The sheet keeps Kinetica’s query field and hides Google’s duplicate search input,
+logo, menu, sign-in control and result-type tabs. The native toolbar contains
+**Search**, **?** (instructions) and **X** (close). Instructions no longer occupy a
+permanent row; progress/errors appear when needed and can be tapped for details.
+The sheet is clamped to available screen space while typing or in a small window.
+The picker’s **ABC** button is on the left and **Search** on the right, with wider
+rounded backgrounds and padding around the toolbar.
 
 Accepted attachments appear in **Recents**, newest first. Tap one to attach it
 again without another search. Tiles show only the image, without repeated attachment
@@ -42,7 +50,12 @@ frames. Some results are videos, WebP images, static thumbnails, or sites that b
 direct downloads. These fail with an explicit message; the keyboard never inserts a
 page URL or pretends that a thumbnail is an animated GIF. HTTPS GIF files up to
 15 MiB, 2048 pixels per dimension and 1000 frames are accepted. No conversion is
-performed. Google search markup is not scraped and no private Gboard keys are used.
+performed. No result URLs are scraped and no private Gboard keys are used. A local
+presentation script hides Google's header controls on `https://[www.]google.com/search`
+only. It observes replaced headers, preserves result/preview controls, and leaves
+source, account, consent and CAPTCHA pages usable. There is no JavaScript bridge.
+Google can change its markup; an unrecognized header may remain visible rather
+than risking hiding results or a challenge.
 
 The tradeoff is extra taps on first use. Google says its public Tenor API is no
 longer available to new clients and its Custom Search JSON API is closed to new
@@ -169,3 +182,43 @@ JVM tests cover persistence, retained media and sizing arithmetic, not Android U
   recipient media, removal of a pending-only selection, sheet height bounds,
   GIF header dimensions and staggered card proportions/limits. Android focus,
   layout, recycled preview correctness and touch checks remain manual.
+
+### v21 search chrome and phone checks
+
+- Open GIFs: **ABC** is left, **Search** is right, both 64 × 48 dp with 12 dp
+  corners and 8 dp outer padding. Tap ABC to return to letters; reopen GIFs and
+  tap Search. Query focus still opens the keyboard.
+- Submit a query: the sheet should be 1.5× the keyboard height, including its
+  toolbar. When typing, it stays above the IME and clamps to the available space.
+  Repeat folded/unfolded, rotated and with larger text.
+- On Google results, expect no duplicate search field, Google logo, hamburger,
+  sign-in button or Images/Videos tabs. Scroll, load more, open/close a result and
+  navigate Back: late/replaced header controls should also disappear. Result
+  images, preview close controls and Visit-source links must remain usable.
+- Open a source website: its UI must remain intact. Any Google consent/sign-in or
+  unusual-traffic challenge must remain usable; do not bypass it.
+- The idle sheet has no instruction row. **?** opens the full instructions in a
+  dismissible dialog. Search and **X** remain on the same toolbar; X returns to
+  the message. A download still shows progress, and a failed download/page load
+  still shows a tappable error with its complete text.
+
+`tools/test_gif_search_chrome.cjs` exercises the production script in Chromium
+against local representative DOM fixtures, including replacement headers, preview
+controls, host/path restrictions and late CAPTCHA insertion. It requires
+`playwright-core` plus Chromium (optionally supplied through `CHROMIUM_PATH`);
+all fixture requests are fulfilled locally. These are not snapshots of Google's
+current mobile page. Phone verification of Google's actual layout is still needed.
+
+### v21 artifact and automated gate
+
+- Package: `com.kinetica.keyboard.dev`, version `2.0.20-voice-dev`, code 94.
+- APK: `kinetica-dev-v21-gif-search-arm64.apk`, 53,299,812 bytes.
+- SHA-256: `74305769eb9552eb8d5dd97ee82b9b97abbe316ee164c661050d8770af15862d`.
+- Signing certificate matches v20; the native LLM and unchanged punctuation model
+  remain packaged. The packaged page-presentation script matches the tested source.
+- `-PvoiceLlm=true -PvoicePunctuation=true assembleDebug test lint --max-workers=4`:
+  passed in 3m 34s. Debug and release each ran 1,209 tests with zero failures/errors
+  and two existing skips. Lint has zero errors. Regression checks cover 150% sheet
+  sizing/clamping/overflow and exact search-page URL scoping.
+- Chromium: 37 local DOM checks passed. No Android UI/device test was run; the
+  phone checklist above remains required for Google's live mobile layout.

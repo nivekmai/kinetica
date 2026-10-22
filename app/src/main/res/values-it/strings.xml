@@ -524,6 +524,8 @@
     <string name="gif_title">GIF</string>
     <string name="gif_search">Cerca GIF con Google</string>
     <string name="gif_search_go">Cerca</string>
+    <string name="gif_help">Come scegliere una GIF</string>
+    <string name="gif_close">Chiudi la ricerca GIF</string>
     <string name="gif_query">Cerca su Google Immagini</string>
     <string name="gif_recents">GIF recenti · Tocca per allegare</string>
     <string name="gif_ready">GIF selezionata per prima · Tocca per allegare</string>

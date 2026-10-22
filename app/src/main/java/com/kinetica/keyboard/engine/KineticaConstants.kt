@@ -20,6 +20,15 @@ object KineticaConstants {
     const val GIF_TILE_GAP_DP = 2
     // Used only when a launch has no measured keyboard height yet.
     const val GIF_SHEET_DEFAULT_DP = 300
+    // More room for results, still clamped to the space above the visible IME.
+    const val GIF_SHEET_HEIGHT_RATIO = 1.5
+    // Spacious picker actions; search-sheet icons retain a 48 dp touch target.
+    const val GIF_ACTION_WIDTH_DP = 64
+    const val GIF_ACTION_HEIGHT_DP = 48
+    const val GIF_ACTION_RADIUS_DP = 12
+    const val GIF_TOOLBAR_PADDING_DP = 8
+    const val GIF_ACTION_GAP_DP = 4
+    const val GIF_ICON_PADDING_DP = 12
     const val GIF_CACHE_BYTES = 200L * 1024 * 1024
     // Receivers can read asynchronously after commitContent acknowledges a handoff.
     const val GIF_CACHE_RETENTION_MS = 24L * 60 * 60 * 1000

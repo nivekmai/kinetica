@@ -7,6 +7,7 @@ import android.graphics.Bitmap
 import android.os.Bundle
 import android.text.InputType
 import android.view.Gravity
+import android.view.View
 import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.core.view.ViewCompat
@@ -19,7 +20,6 @@ import android.webkit.CookieManager
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -37,6 +37,7 @@ class GifSearchActivity : Activity() {
     private var generation = 0
     private var dialog: AlertDialog? = null
     private var showQueryOnWindowFocus = false
+    private val chromeScript by lazy { assets.open("gif-search-chrome.js").bufferedReader().use { it.readText() } }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -58,7 +59,7 @@ class GifSearchActivity : Activity() {
         var preferredHeight = (intent.getFloatExtra(SHEET_HEIGHT_DP, 0f)
             .takeIf { it.isFinite() && it > 0f } ?: KineticaConstants.GIF_SHEET_DEFAULT_DP.toFloat())
             .times(resources.displayMetrics.density).toInt()
-        root.addView(layout, FrameLayout.LayoutParams(-1, preferredHeight, Gravity.BOTTOM))
+        root.addView(layout, FrameLayout.LayoutParams(-1, GifSheetSizing.height(preferredHeight, Int.MAX_VALUE), Gravity.BOTTOM))
         fun resizeSheet() {
             if (root.height <= 0) return
             val height = GifSheetSizing.height(preferredHeight, root.height - root.paddingTop - root.paddingBottom)
@@ -79,7 +80,12 @@ class GifSearchActivity : Activity() {
         }
         root.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> resizeSheet() }
         root.setOnClickListener { finish() }
-        val controls = LinearLayout(this)
+        fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
+        val controls = LinearLayout(this).apply {
+            gravity = Gravity.CENTER_VERTICAL
+            val padding = dp(KineticaConstants.GIF_TOOLBAR_PADDING_DP)
+            setPadding(padding, padding, padding, padding)
+        }
         query = EditText(this).apply {
             hint = getString(R.string.gif_query)
             contentDescription = hint
@@ -92,20 +98,27 @@ class GifSearchActivity : Activity() {
             }
         }
         controls.addView(query, LinearLayout.LayoutParams(0, -2, 1f))
-        controls.addView(GifSearchButton(this) { search() },
-            LinearLayout.LayoutParams((48 * resources.displayMetrics.density).toInt(), (48 * resources.displayMetrics.density).toInt()))
-        controls.addView(Button(this).apply { setText(android.R.string.cancel); setOnClickListener { finish() } })
+        fun addAction(icon: Int, label: Int, action: () -> Unit) {
+            controls.addView(GifIconButton(this, icon, label, action),
+                LinearLayout.LayoutParams(dp(KineticaConstants.GIF_ACTION_HEIGHT_DP),
+                    dp(KineticaConstants.GIF_ACTION_HEIGHT_DP)).apply {
+                    marginStart = dp(KineticaConstants.GIF_ACTION_GAP_DP)
+                })
+        }
+        addAction(R.drawable.ic_gif_search, R.string.gif_search_go) { search() }
+        addAction(R.drawable.ic_gif_help, R.string.gif_help) {
+            showDetails(getString(R.string.gif_browser_hint), getString(R.string.gif_search))
+        }
+        addAction(R.drawable.ic_gif_close, R.string.gif_close) { finish() }
         layout.addView(controls)
         status = TextView(this).apply {
-            setText(R.string.gif_browser_hint); setPadding(16, 8, 16, 8)
+            visibility = View.GONE
+            setPadding(dp(16), dp(8), dp(16), dp(8))
             maxLines = 2
             ellipsize = android.text.TextUtils.TruncateAt.END
-            // Full instructions and errors remain available in a compact sheet.
-            setOnClickListener {
-                dialog?.dismiss()
-                dialog = AlertDialog.Builder(this@GifSearchActivity).setMessage(text)
-                    .setPositiveButton(android.R.string.ok, null).show()
-            }
+            accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
+            // Only transient progress/errors occupy space; tap for an untruncated message.
+            setOnClickListener { showDetails(text) }
         }
         layout.addView(status)
         web = WebView(this).apply {
@@ -119,15 +132,21 @@ class GifSearchActivity : Activity() {
                 override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                     if (!request.isForMainFrame) return false
                     val url = request.url.toString()
-                    if (!GifPolicy.httpsUrl(url)) { status.setText(R.string.gif_https_only); return true }
+                    if (!GifPolicy.httpsUrl(url)) { showStatus(R.string.gif_https_only); return true }
                     if (request.url.path.orEmpty().endsWith(".gif", true)) { choose(url); return true }
                     return false
                 }
                 override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
-                    if (download == null) status.setText(R.string.gif_browser_hint)
+                    if (download == null) showStatus(null)
+                }
+                override fun onPageCommitVisible(view: WebView, url: String?) {
+                    hideGoogleChrome(view, url)
+                }
+                override fun onPageFinished(view: WebView, url: String?) {
+                    hideGoogleChrome(view, url)
                 }
                 override fun onReceivedError(view: WebView, request: WebResourceRequest, error: android.webkit.WebResourceError) {
-                    if (request.isForMainFrame) status.setText(R.string.gif_browser_error)
+                    if (request.isForMainFrame) showStatus(R.string.gif_browser_error)
                 }
             }
             setDownloadListener { url, _, _, _, _ -> choose(url) }
@@ -151,6 +170,21 @@ class GifSearchActivity : Activity() {
         if (showQueryOnWindowFocus) query.requestFocus()
     }
 
+    private fun hideGoogleChrome(view: WebView, url: String?) {
+        if (GifSearchChrome.isResultsPage(url)) view.evaluateJavascript(chromeScript, null)
+    }
+
+    private fun showDetails(message: CharSequence, title: String? = null) {
+        dialog?.dismiss()
+        dialog = AlertDialog.Builder(this).setTitle(title).setMessage(message)
+            .setPositiveButton(android.R.string.ok, null).show()
+    }
+
+    private fun showStatus(message: Int?) {
+        status.visibility = if (message == null) View.GONE else View.VISIBLE
+        if (message != null) status.setText(message)
+    }
+
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus && showQueryOnWindowFocus && ::query.isInitialized) {
@@ -170,10 +204,10 @@ class GifSearchActivity : Activity() {
     }
 
     private fun choose(url: String) {
-        if (!GifPolicy.httpsUrl(url)) { status.setText(R.string.gif_not_gif); return }
+        if (!GifPolicy.httpsUrl(url)) { showStatus(R.string.gif_not_gif); return }
         cancelDownload()
         val ticket = generation
-        status.setText(R.string.gif_downloading)
+        showStatus(R.string.gif_downloading)
         download = worker.submit {
             val result = runCatching { GifStore(this).download(url) }
             runOnUiThread {
@@ -181,7 +215,8 @@ class GifSearchActivity : Activity() {
                 download = null
                 result.fold(onSuccess = { id ->
                     val file = GifStore(this).file(id) ?: return@fold
-                    status.setText(R.string.gif_browser_hint)
+                    showStatus(null)
+                    dialog?.dismiss()
                     dialog = AlertDialog.Builder(this)
                         .setTitle(R.string.gif_use)
                         .setView(GifThumbnail(this, file).apply { minimumHeight = (200 * resources.displayMetrics.density).toInt() })
@@ -191,7 +226,7 @@ class GifSearchActivity : Activity() {
                                 intent.getIntExtra(TARGET_FIELD, 0))
                             finish()
                         }.setNegativeButton(android.R.string.cancel, null).show()
-                }, onFailure = { status.setText(R.string.gif_download_error) })
+                }, onFailure = { showStatus(R.string.gif_download_error) })
             }
         }
     }
@@ -200,7 +235,7 @@ class GifSearchActivity : Activity() {
 
     @Deprecated("Legacy back dispatch for API 26 compatibility")
     override fun onBackPressed() {
-        if (download != null) { cancelDownload(); status.setText(R.string.gif_browser_hint) }
+        if (download != null) { cancelDownload(); showStatus(null) }
         else if (web.canGoBack()) web.goBack() else super.onBackPressed()
     }
     override fun onSaveInstanceState(outState: Bundle) {

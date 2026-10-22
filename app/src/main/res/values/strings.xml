@@ -566,6 +566,8 @@
     <string name="gif_title">GIFs</string>
     <string name="gif_search">Google GIF search</string>
     <string name="gif_search_go">Search</string>
+    <string name="gif_help">How to choose a GIF</string>
+    <string name="gif_close">Close GIF search</string>
     <string name="gif_query">Search Google Images</string>
     <string name="gif_recents">Recent GIFs · Tap to attach</string>
     <string name="gif_ready">Selected GIF first · Tap to attach</string>
