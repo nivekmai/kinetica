@@ -2,7 +2,7 @@ package com.kinetica.keyboard.gif
 
 import android.annotation.SuppressLint
 import android.app.Activity
-import android.app.AlertDialog
+import androidx.appcompat.app.AlertDialog
 import android.graphics.Bitmap
 import android.os.Bundle
 import android.text.InputType
@@ -43,7 +43,7 @@ class GifSearchActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // This screen is only launched by our own IME with a destination, never exported.
-        if (intent.getStringExtra(TARGET_PACKAGE).isNullOrBlank()) { finish(); return }
+        if (!GifTransfer.isSearchActive(intent.getStringExtra(SEARCH_TOKEN))) { finish(); return }
         title = getString(R.string.gif_search)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
@@ -178,6 +178,18 @@ class GifSearchActivity : Activity() {
         dialog?.dismiss()
         dialog = AlertDialog.Builder(this).setTitle(title).setMessage(message)
             .setPositiveButton(android.R.string.ok, null).show()
+        styleDialogButtons()
+    }
+
+    private fun styleDialogButtons() {
+        val color = android.util.TypedValue()
+        theme.resolveAttribute(android.R.attr.textColorPrimary, color, true)
+        val textColors = if (color.resourceId != 0) getColorStateList(color.resourceId)
+            else android.content.res.ColorStateList.valueOf(color.data)
+        // Use the theme's readable primary text, not the saturated accent on dark gray.
+        listOf(AlertDialog.BUTTON_POSITIVE, AlertDialog.BUTTON_NEGATIVE).forEach {
+            dialog?.getButton(it)?.setTextColor(textColors)
+        }
     }
 
     private fun showStatus(message: Int?) {
@@ -222,10 +234,15 @@ class GifSearchActivity : Activity() {
                         .setView(GifThumbnail(this, file).apply { minimumHeight = (200 * resources.displayMetrics.density).toInt() })
                         .setMessage(R.string.gif_return_hint)
                         .setPositiveButton(R.string.gif_use) { _, _ ->
-                            GifTransfer.pending = GifTransfer.Pending(id, intent.getStringExtra(TARGET_PACKAGE).orEmpty(),
-                                intent.getIntExtra(TARGET_FIELD, 0))
-                            finish()
+                            if (GifTransfer.confirmSearch(intent.getStringExtra(SEARCH_TOKEN), id,
+                                    android.os.SystemClock.elapsedRealtime())) {
+                                showQueryOnWindowFocus = false
+                                (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager)
+                                    .hideSoftInputFromWindow(query.windowToken, 0)
+                                finish()
+                            } else showStatus(R.string.gif_search_expired)
                         }.setNegativeButton(android.R.string.cancel, null).show()
+                    styleDialogButtons()
                 }, onFailure = { showStatus(R.string.gif_download_error) })
             }
         }
@@ -245,13 +262,13 @@ class GifSearchActivity : Activity() {
         super.onSaveInstanceState(outState)
     }
     override fun onDestroy() {
+        if (isFinishing) GifTransfer.cancelSearch(intent.getStringExtra(SEARCH_TOKEN))
         cancelDownload(); worker.shutdownNow()
         if (::web.isInitialized) { (web.parent as? LinearLayout)?.removeView(web); web.destroy() }
         super.onDestroy()
     }
     companion object {
         const val SHEET_HEIGHT_DP = "gif_sheet_height_dp"
-        const val TARGET_PACKAGE = "gif_target_package"
-        const val TARGET_FIELD = "gif_target_field"
+        const val SEARCH_TOKEN = "gif_search_token"
     }
 }

@@ -538,7 +538,9 @@
     <string name="gif_downloading">Download e verifica della GIF…</string>
     <string name="gif_download_error">Impossibile scaricare una GIF animata. Apri il sito di origine, tieni premuta la GIF originale e riprova. Dimensione massima: 15 MB; è richiesto HTTPS.</string>
     <string name="gif_use">Usa questa GIF</string>
-    <string name="gif_return_hint">Torna al messaggio, poi tocca la GIF selezionata nella tastiera per allegarla.</string>
+    <string name="gif_return_hint">Allegare questa GIF al messaggio?</string>
+    <string name="gif_attach_retry">Impossibile allegare automaticamente. Torna al messaggio originale e apri GIF per riprovare.</string>
+    <string name="gif_search_expired">Questa sessione di ricerca è terminata. Riapri la ricerca GIF dal messaggio.</string>
     <string name="gif_rejected">Questa app non ha accettato la GIF. Non è stata aggiunta ai recenti.</string>
     <string name="gif_remove">Rimuovi</string>
     <string name="gif_remove_confirm">Rimuovere questa GIF dal selettore?</string>

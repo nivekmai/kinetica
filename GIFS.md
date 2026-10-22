@@ -1,4 +1,4 @@
-# Google GIF search (experimental v22)
+# Google GIF search (experimental v23)
 
 Open the emoji picker and tap **GIFs**, or configure **GIFs** in any shortcut picker.
 `:gifs` works in letter/punctuation/Enter alternate lists, like `:paste`.
@@ -9,11 +9,12 @@ Open the emoji picker and tap **GIFs**, or configure **GIFs** in any shortcut pi
    hide, leaving the search sheet at the bottom of the screen.
 2. Tap a result, then hold its full-sized animated image. If the result is a static
    Google thumbnail, visit its source website and hold the original GIF instead.
-3. After download and validation, tap **Use this GIF**. Return to your original
-   message field if Android does not restore it automatically.
-4. Tap the selected GIF in the keyboard to attach it. The messaging app still
-   controls sending the message. If the keyboard did not reopen, tap the message
-   field and reopen GIFs.
+3. After download and validation, tap **Use this GIF**. The browser closes and the
+   GIF attaches directly when the original message field regains focus. There is
+   no second tap in Recents. The receiving app controls sending the message.
+4. If the field changed, the return took more than 30 seconds, or the app refused
+   the attachment, a retry message appears. Open GIFs in the original field to
+   retry the selected GIF manually.
 
 The sheet keeps Kinetica’s query field and hides Google’s duplicate search input,
 logo, menu, sign-in control and result-type tabs. The native toolbar contains
@@ -24,10 +25,9 @@ The picker’s **ABC** button is on the left and **Search** on the right, with w
 rounded backgrounds and padding around the toolbar.
 
 Text keys are the default when opening a field, including fields that accept GIFs.
-Choosing **Use this GIF** in the browser offers the GIF panel once when returning
-to the originating field. After ABC, Back, hiding/reopening the keyboard, or an
-editor restart, an unsent selection does not keep reopening the panel. It remains
-available at the front of the picker if GIFs is opened manually.
+Choosing **Use this GIF** authorizes one attachment on return to the originating
+field. An editor restart or hide/show cannot attach twice or reopen Recents. An
+unsent selection remains available at the front of the manually opened picker.
 
 Accepted attachments appear in **Recents**, newest first. Tap one to attach it
 again without another search. Tiles show only the image, without repeated attachment
@@ -75,10 +75,19 @@ Sources checked during development:
 
 ## Attachment and lifetime rules
 
-The browser cannot call into the IME through JavaScript. Choosing a file creates a
-memory-only pending item tied to the originating package/field. Returning to that
-field offers the file; it never sends automatically. An explicit tap requires the
-same InputConnection that opened the panel, and rechecks MIME support and privacy.
+The browser cannot call into the IME through JavaScript. Starting search creates
+a memory-only request token bound to the originating package, field ID/name,
+input type, selection and up to 128 characters before/after the cursor. That small
+context stays in memory; it never goes to WebView, URLs, disk or logs. **Use this
+GIF** confirms the request once. On the first return to an external editor, the
+IME consumes the request before attempting attachment. A different destination,
+changed/unreadable context, or return after 30 seconds requires a manual retry.
+The editor may reuse IDs across empty conversations; this snapshot is an extra
+check, not a universal conversation identifier supplied by Android.
+
+The handoff checks the current InputConnection, MIME support and privacy. Repeated
+start-input callbacks cannot replay it, and failure does not rearm it. Manual
+picker taps still require the same InputConnection that opened that panel.
 A stale tap after an editor switch is rejected. FileProvider grants read access
 only to the chosen cache content URI. Plain text fields report unsupported input;
 apps that reject commitContent do not create a recent entry. An accepted handoff
@@ -102,7 +111,7 @@ No Android device or emulator is attached to this development environment.
 
 Manual checks required on the Pixel:
 - In Messages, open emoji → GIFs → Google GIF search, search a phrase, open a GIF
-  result, hold the actual GIF, confirm, return and attach. Expect an animated
+  result, hold the actual GIF, confirm and return. Expect an animated
   attachment in the composer; sending remains the app's Send button.
 - Repeat in another messaging app. Test a plain text field too: no false success
   or pasted URL when the editor does not support GIFs.
@@ -231,6 +240,8 @@ current mobile page. Phone verification of Google's actual layout is still neede
 
 ### v22 default-keyboard regression
 
+Historical v22 behavior; v23 replaces its automatic picker offer with attachment.
+
 Previously, every `onStartInputView` treated an unsent browser selection as a new
 request to show GIFs. Returning to text did not clear that trigger. The selection
 now has a separate one-time return offer, consumed before showing the picker;
@@ -264,3 +275,55 @@ checks still require the phone; no Android UI test was run.
   passed in 2m 16s. Debug and release each ran 1,215 tests, zero failures/errors,
   two existing skips. Lint has zero errors. The six new return-offer regressions
   passed in both variants; the Android phone checks above remain manual.
+
+### v23 screenshot fixes and phone checks
+
+- The GIF panel takes the suggestion row's height as content. The suggestion row
+  is GONE rather than INVISIBLE; overall IME height stays unchanged and the unused
+  strip above ABC/Search disappears. Navigation keeps its existing sizing.
+- Header filtering no longer treats an enclosing `main` or `role=main` as proof
+  that every descendant is a result. It recognizes mobile search-type navigation,
+  SVG logos and query controls, preserves actual result/preview regions and
+  pagination, and uses reversible CSSOM declarations instead of an inline style
+  element that a page CSP can reject. A challenge restores the original styles.
+- GIF confirmation and help use AppCompat dialogs. Action buttons use readable
+  theme primary text instead of the dark accent, in both light and dark modes.
+- **Use this GIF** confirms one direct attachment on returning to the original
+  editor; the picker no longer opens as an intermediate confirmation screen.
+
+Phone checks, based on the three screenshots:
+1. Open Recents in the same message field: ABC/Search should sit at the top with
+   only their intentional padding; the editor must not jump when changing modes.
+2. Open search in portrait/folded and unfolded layouts. Google logo, query input
+   and type tabs should disappear while results, image preview controls and
+   pagination remain usable. Open a source site: its header should remain intact.
+3. Hold a GIF and inspect the confirmation in dark and light modes. Cancel and
+   Use this GIF must have clearly readable text. Check the ? help dialog too.
+4. Tap Use this GIF: expect one attachment in the original composer and text keys,
+   with no second Recents tap. Hide/show, switch fields and trigger an editor
+   restart: no duplicate attachment or automatic picker reopening.
+5. Repeat in another GIF-capable app. Cancel a preview/search: no attachment.
+   Change the target text/field, return after 30 seconds, or use an app that
+   rejects content: expect a retry notice, no automatic retry, and a manually
+   available pending GIF in the original field.
+
+A fresh live mobile-browser check from this development network again received
+Google's unusual-traffic challenge, so the exact mobile DOM in the screenshots
+was not retrievable. Local regressions reproduce the enclosing-main and strict-CSP
+failure cases; Google's live layout, dialog contrast and Android handoff still
+require the phone checks above. No Android device or emulator test was run.
+
+### v23 artifact and automated gate
+
+- Package: `com.kinetica.keyboard.dev`, version `2.0.22-voice-dev`, code 96.
+- APK: `kinetica-dev-v23-gif-fixes-arm64.apk`, 53,301,512 bytes.
+- SHA-256: `5da6b0dbe5c32b9d08e579c2c03181486787a3f59a621f7a705277c85f2c0907`.
+- Signing certificate matches v22. Native LLM and unchanged punctuation model
+  remain packaged; the packaged header script matches the browser-tested source.
+- Final `-PvoiceLlm=true -PvoicePunctuation=true assembleDebug test lint --max-workers=4`:
+  passed in 2m 1s. Debug/release each ran 1,220 tests, zero failures/errors, two
+  existing skips. Lint has zero errors. Tests include panel footprint arithmetic,
+  confirmation-token validity, direct one-time handoff, duplicate callbacks,
+  changed/unreadable editors, expiry, cancellation, and retained manual retries.
+- Browser: all 46 local DOM checks passed. The v22 script fails the added mobile
+  main-wrapper regression. This does not replace the live Pixel checks above.

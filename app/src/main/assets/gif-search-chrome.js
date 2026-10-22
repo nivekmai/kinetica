@@ -4,44 +4,81 @@
     const allowedPage = () => location.protocol === 'https:' &&
         (location.hostname === 'www.google.com' || location.hostname === 'google.com') &&
         (!location.port || location.port === '443') && location.pathname === '/search';
-    if (!allowedPage() || window.__kineticaGifChrome) return;
-    window.__kineticaGifChrome = true;
+    if (!allowedPage()) return;
+    if (window.__kineticaGifChrome) { window.__kineticaGifChrome(); return; }
 
-    const active = 'data-kinetica-gif-results';
-    const hidden = 'data-kinetica-gif-chrome';
-    const results = '#search, #rso, #islrg, main, [role="main"]';
+    // Mobile Google can put the header INSIDE main. Only actual result regions
+    // and previews protect descendants; a main wrapper alone must not protect UI.
+    const results = '#search, #rso, #islrg, [data-docid], [data-ri]';
     const protectedArea = results + ', dialog, [role="dialog"], [aria-modal="true"]';
     const challenge = '#captcha, #captcha-form, .g-recaptcha, iframe[src*="/recaptcha/"], ' +
         'form[action*="/sorry/"], form[action*="consent.google."]';
     // IDs cover Google's desktop/mobile header variants; semantic fallbacks handle
     // replacement nodes. Never hide a result, image-preview dialog or its ancestors.
     const controls = '#gb, #gbtop, #hdr, #searchform, #sfcnt, #tophf, #top_nav, #hdtb, #appbar, ' +
-        '#logo, #logocont, img[alt="Google"], [aria-label="Google"], ' +
-        'header, [role="banner"], [role="tablist"], ' +
-        'form[role="search"], form[action="/search"], form[action^="/search?"], #tsf, ' +
+        '#logo, #hplogo, #logocont, img[alt="Google"], [aria-label="Google"], ' +
+        '[role="tablist"], [role="search"], input[name="q"], textarea[name="q"], ' +
+        'form[action="/search"], form[action^="/search?"], #tsf, ' +
         'a[href^="https://accounts.google.com/"], ' +
         '[aria-label="Main menu"], [aria-label="Menu principale"]';
-    const style = document.createElement('style');
-    style.textContent = `
-        html[${active}] [${hidden}] { display: none !important; }
-        html[${active}] body, html[${active}] #main, html[${active}] #cnt,
-        html[${active}] #rcnt { padding-top: 0 !important; margin-top: 0 !important; }
-    `;
+    const containers = 'header, [role="banner"], nav, [role="navigation"], form';
+    const original = new Map();
+    function typeNavigation(node) {
+        if (!node.matches('nav, [role="navigation"]')) return false;
+        const types = new Set();
+        Array.from(node.querySelectorAll('a[href]')).forEach(link => {
+            const url = new URL(link.href, location.href);
+            if (url.origin === location.origin && url.pathname === '/search') {
+                types.add(url.searchParams.get('udm') || url.searchParams.get('tbm') || 'all');
+            }
+        });
+        // Pagination keeps the same search type; do not remove next-page controls.
+        return types.size > 1;
+    }
+    function apply(desired) {
+        // Inline CSSOM writes also work on pages whose CSP rejects injected style
+        // elements. Preserve and restore each original declaration on transitions.
+        original.forEach((props, node) => {
+            props.forEach((value, property) => {
+                if (desired.has(node) && desired.get(node).has(property)) return;
+                if (value[0]) node.style.setProperty(property, value[0], value[1]);
+                else node.style.removeProperty(property);
+                props.delete(property);
+            });
+            if (!props.size) original.delete(node);
+        });
+        desired.forEach((props, node) => {
+            if (!original.has(node)) original.set(node, new Map());
+            props.forEach((value, property) => {
+                const saved = original.get(node);
+                if (!saved.has(property)) saved.set(property,
+                    [node.style.getPropertyValue(property), node.style.getPropertyPriority(property)]);
+                if (node.style.getPropertyValue(property) !== value || node.style.getPropertyPriority(property) !== 'important') {
+                    node.style.setProperty(property, value, 'important');
+                }
+            });
+        });
+    }
     function update() {
         // Consent/security pages stay usable, including a same-document transition.
         if (!allowedPage() || document.querySelector(challenge)) {
-            document.documentElement.removeAttribute(active);
+            apply(new Map());
             return;
         }
-        if (!style.isConnected) (document.head || document.documentElement).appendChild(style);
-        document.documentElement.setAttribute(active, '');
-        document.querySelectorAll(controls + ', [' + hidden + ']').forEach(node => {
-            if (node.matches(controls) && !node.closest(protectedArea) && !node.querySelector(protectedArea)) {
-                node.setAttribute(hidden, '');
-            } else {
-                node.removeAttribute(hidden);
+        const desired = new Map();
+        document.querySelectorAll(controls + ', ' + containers).forEach(node => {
+            const header = node.matches(controls) || typeNavigation(node) ||
+                (node.matches('header, [role="banner"], form') && node.querySelector(controls)) ||
+                (node.matches('header, [role="banner"]') && !node.closest('main, [role="main"]'));
+            if (header && !node.closest(protectedArea) &&
+                !node.querySelector(protectedArea + ', main, [role="main"]')) {
+                desired.set(node, new Map([['display', 'none']]));
             }
         });
+        document.querySelectorAll('body, #main, #cnt, #rcnt').forEach(node => {
+            desired.set(node, new Map([['padding-top', '0px'], ['margin-top', '0px']]));
+        });
+        apply(desired);
     }
     let pending = false;
     function schedule() {
@@ -49,9 +86,10 @@
         pending = true;
         requestAnimationFrame(() => { pending = false; update(); });
     }
+    window.__kineticaGifChrome = schedule;
     update();
-    // Google replaces headers during navigation and preview transitions. Observe
-    // child changes, not our own marker attributes, to avoid an observer loop.
-    new MutationObserver(schedule).observe(document.documentElement, { childList: true, subtree: true });
+    // Writes are idempotent, so watching style changes cannot create a feedback loop.
+    new MutationObserver(schedule).observe(document.documentElement, { childList: true, subtree: true,
+        attributes: true, attributeFilter: ['id', 'class', 'role', 'style', 'aria-label', 'action', 'href'] });
     addEventListener('popstate', schedule);
 })();

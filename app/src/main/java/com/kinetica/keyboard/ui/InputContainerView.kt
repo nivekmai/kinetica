@@ -49,6 +49,7 @@ class InputContainerView(
     // Plain, showing the window background: empty space below the keys, not chrome.
     private val bottomGap = View(context)
     private var navigation: View? = null
+    private var panelIncludesSuggestions = false
     private var dragStartRawY = 0f
     private var dragStartHeight = 0
 
@@ -124,25 +125,30 @@ class InputContainerView(
     }
 
     /** Same footprint as the keyboard; the blank suggestion strip keeps the editor steady. */
-    fun showNavigation(panel: View) {
+    fun showNavigation(panel: View, includeSuggestions: Boolean = false) {
         navigation = panel
+        panelIncludesSuggestions = includeSuggestions
         addView(panel, indexOfChild(keyboardView),
-            LayoutParams(LayoutParams.MATCH_PARENT, keyboardView.layoutParams.height))
+            LayoutParams(LayoutParams.MATCH_PARENT, panelHeight()))
         keyboardView.visibility = GONE
-        suggestionBar.visibility = INVISIBLE
+        suggestionBar.visibility = if (includeSuggestions) GONE else INVISIBLE
     }
 
     fun hideNavigation(panel: View) {
         removeView(panel)
         navigation = null
+        panelIncludesSuggestions = false
         keyboardView.visibility = VISIBLE
         suggestionBar.visibility = VISIBLE
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        navigation?.layoutParams?.height = keyboardView.layoutParams.height
+        navigation?.layoutParams?.height = panelHeight()
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
     }
+
+    private fun panelHeight(): Int = com.kinetica.keyboard.settings.KeyboardHeights.panelPx(
+        keyboardView.layoutParams.height, suggestionBar.layoutParams.height, panelIncludesSuggestions)
 
     /** Swaps the keyboard for the emoji picker at the keyboard's height. */
     fun showEmojiPicker(picker: View) {

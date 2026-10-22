@@ -981,7 +981,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         val pending = GifTransfer.pending?.takeIf {
             it.packageName == info.packageName && it.fieldId == info.fieldId && store.file(it.id) != null
         }
-        if (pending != null) GifTransfer.acknowledgeReturnOffer()
+        if (pending != null) GifTransfer.cancelAutomaticAttachment()
         val panel = GifPanel(this,
             KeyboardTheme.resolve(this, config.themeMode, config.themeColor, config.themeBrightness),
             pending?.id, if (editorState.teachesNothing) emptyList() else store.recents(),
@@ -989,15 +989,18 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             onSearch = {
                 val target = currentInputEditorInfo
                 if (target != null && currentInputConnection === connectionAtOpen && !editorState.privateMode) {
+                    val token = GifTransfer.beginSearch(gifEditorTarget(target, connectionAtOpen))
                     startActivity(Intent(this, GifSearchActivity::class.java)
                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        .putExtra(GifSearchActivity.TARGET_PACKAGE, target.packageName)
-                        .putExtra(GifSearchActivity.TARGET_FIELD, target.fieldId)
+                        .putExtra(GifSearchActivity.SEARCH_TOKEN, token)
                         .putExtra(GifSearchActivity.SHEET_HEIGHT_DP,
                             (containerView?.height ?: 0) / resources.displayMetrics.density))
                 }
             },
-            onSend = { sendGif(it, connectionAtOpen) },
+            onSend = {
+                if (!sendGif(it, connectionAtOpen))
+                    android.widget.Toast.makeText(this, R.string.gif_rejected, android.widget.Toast.LENGTH_LONG).show()
+            },
             onRemove = { id ->
                 if (currentInputConnection === connectionAtOpen) {
                     val removed = runCatching { store.remove(id) }.isSuccess
@@ -1009,15 +1012,15 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             },
             onClose = { closeGifs() })
         gifPanel = panel
-        containerView?.showNavigation(panel)
+        containerView?.showNavigation(panel, includeSuggestions = true)
     }
 
-    private fun sendGif(id: String, expectedConnection: android.view.inputmethod.InputConnection) {
-        val connection = currentInputConnection ?: return
-        val info = currentInputEditorInfo ?: return
-        if (!GifPolicy.canAttach(expectedConnection, connection, editorState.privateMode, EditorInfoCompat.getContentMimeTypes(info))) return
+    private fun sendGif(id: String, expectedConnection: android.view.inputmethod.InputConnection): Boolean {
+        val connection = currentInputConnection ?: return false
+        val info = currentInputEditorInfo ?: return false
+        if (!GifPolicy.canAttach(expectedConnection, connection, editorState.privateMode, EditorInfoCompat.getContentMimeTypes(info))) return false
         val store = GifStore(this)
-        val file = store.file(id) ?: return
+        val file = store.file(id) ?: return false
         val accepted = runCatching {
             val uri = FileProvider.getUriForFile(this, "$packageName.gifs", file)
             InputConnectionCompat.commitContent(connection, info,
@@ -1029,7 +1032,31 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             if (!editorState.teachesNothing) runCatching { store.remember(id) }
             GifTransfer.pending = null
             closeGifs()
-        } else android.widget.Toast.makeText(this, R.string.gif_rejected, android.widget.Toast.LENGTH_LONG).show()
+        }
+        return accepted
+    }
+
+    private fun gifEditorTarget(info: EditorInfo, connection: android.view.inputmethod.InputConnection) =
+        GifTransfer.Target(info.packageName.orEmpty(), info.fieldId, info.fieldName, info.inputType,
+            selStart, selEnd,
+            runCatching { connection.getTextBeforeCursor(KineticaConstants.GIF_EDITOR_CONTEXT_CHARS, 0)?.toString() }.getOrNull(),
+            runCatching { connection.getTextAfterCursor(KineticaConstants.GIF_EDITOR_CONTEXT_CHARS, 0)?.toString() }.getOrNull())
+
+    private fun attachGifOnReturn() {
+        if (!GifTransfer.hasAttachmentRequest) return
+        val info = currentInputEditorInfo ?: return
+        // Focus can pass through the search field while its activity is closing.
+        if (info.packageName == packageName) return
+        if (editorState.privateMode) {
+            // Do not read surrounding text from a password field during a stale return.
+            GifTransfer.cancelAutomaticAttachment()
+            return
+        }
+        val connection = currentInputConnection ?: return
+        val result = GifTransfer.takeAttachment(gifEditorTarget(info, connection), SystemClock.elapsedRealtime()) ?: return
+        if (!result.attach || !sendGif(result.selection.id, connection)) {
+            android.widget.Toast.makeText(this, R.string.gif_attach_retry, android.widget.Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun layoutFor(name: String): KeyboardLayout =
@@ -1225,6 +1252,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         updateAutoShift()
         reloadChords()
         reloadEmojiUses()
+        attachGifOnReturn()
     }
 
     /** Mirrors the expansion table into memory, on the database thread. */
@@ -1265,19 +1293,14 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     override fun onStartInputView(editorInfo: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(editorInfo, restarting)
         // Showing a hidden keyboard need not call onStartInput. Always restore keys,
-        // unless a newly chosen GIF has a one-time return offer for this editor.
+        // including after the browser has attached a newly chosen GIF.
         closeGifs()
         suggestionBar?.clearSuggestions()
         updateBarWordPending()
         keyboardView?.setShiftUppercase(shift.isShifted)
         closeEmojiPicker()
         applyViewConfig()
-        val pending = GifTransfer.takeReturnOffer(editorInfo?.packageName, editorInfo?.fieldId ?: 0)
-        if (pending != null && editorInfo != null && !editorState.privateMode &&
-            GifPolicy.acceptsGif(EditorInfoCompat.getContentMimeTypes(editorInfo)) &&
-            GifStore(this).file(pending.id) != null) {
-            openGifs()
-        }
+        attachGifOnReturn()
     }
 
     override fun onFinishInput() {

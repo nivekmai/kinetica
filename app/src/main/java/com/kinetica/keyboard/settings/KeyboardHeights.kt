@@ -86,4 +86,8 @@ object KeyboardHeights {
     /** The suggestion bar's height in dp: one row, or taller with recent words on. */
     fun barDp(settingDp: Int, recentWords: Boolean): Float =
         settingDp * if (recentWords) RECENT_BAR_TALL else 1f
+
+    /** GIFs use the hidden suggestion row for content without shifting the editor. */
+    fun panelPx(keyboardPx: Int, suggestionPx: Int, includeSuggestions: Boolean): Int =
+        keyboardPx + if (includeSuggestions) suggestionPx else 0
 }
