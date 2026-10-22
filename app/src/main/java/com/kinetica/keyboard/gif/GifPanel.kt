@@ -17,7 +17,7 @@ class GifPanel(
     supported: Boolean,
     onSearch: () -> Unit,
     onSend: (String) -> Unit,
-    onClear: () -> Unit,
+    onRemove: (String) -> Unit,
     onClose: () -> Unit,
 ) : LinearLayout(context) {
     init {
@@ -32,7 +32,6 @@ class GifPanel(
             setOnClickListener { callback() }
         }
         row.addView(button(R.string.gif_search, onSearch), LayoutParams(0, -2, 2f))
-        row.addView(button(R.string.gif_clear, onClear), LayoutParams(0, -2, 1f))
         row.addView(button(R.string.emoji_back_to_letters, onClose), LayoutParams(0, -2, 1f))
         addView(row)
         addView(TextView(context).apply {
@@ -45,27 +44,47 @@ class GifPanel(
             setText(R.string.gif_empty); setTextColor(theme.keyHint); setPadding(dp(12), dp(12), dp(12), dp(12))
         })
         val store = GifStore(context)
+        val confirmation = LinearLayout(context).apply { orientation = VERTICAL; visibility = GONE }
+        val scroll = ScrollView(context).apply { addView(grid) }
+        fun confirmRemoval(id: String) {
+            confirmation.removeAllViews()
+            confirmation.addView(TextView(context).apply {
+                setText(R.string.gif_remove_confirm); setTextColor(theme.keyText)
+                textSize = 18f; setPadding(dp(16), dp(16), dp(16), dp(16))
+                accessibilityLiveRegion = ACCESSIBILITY_LIVE_REGION_POLITE
+            })
+            val actions = LinearLayout(context)
+            val cancel = button(android.R.string.cancel) {
+                confirmation.visibility = GONE
+                scroll.visibility = VISIBLE
+            }
+            actions.addView(cancel, LayoutParams(0, -2, 1f))
+            actions.addView(button(R.string.gif_remove) { onRemove(id) }, LayoutParams(0, -2, 1f))
+            confirmation.addView(actions)
+            scroll.visibility = GONE
+            confirmation.visibility = VISIBLE
+            cancel.requestFocus()
+        }
         ids.chunked(3).forEach { group ->
             val cells = LinearLayout(context)
             group.forEach { id ->
                 store.file(id)?.let { file ->
                     val cell = LinearLayout(context).apply { orientation = VERTICAL }
-                    cell.addView(GifThumbnail(context, file), LayoutParams(-1, dp(90)))
-                    cell.addView(TextView(context).apply {
-                        setText(if (id == pending) R.string.gif_insert else R.string.gif_insert_recent)
-                        setTextColor(theme.keyText); gravity = Gravity.CENTER
-                    })
-                    cell.contentDescription = context.getString(R.string.gif_insert)
-                    cell.isEnabled = supported; cell.alpha = if (supported) 1f else .5f
+                    cell.addView(GifThumbnail(context, file), LayoutParams(-1, -1))
+                    cell.contentDescription = context.getString(R.string.gif_tile_description, ids.indexOf(id) + 1)
+                    cell.alpha = if (supported) 1f else .5f
                     cell.isFocusable = true
-                    cell.setOnClickListener { onSend(id) }
-                    cells.addView(cell, LayoutParams(0, dp(120), 1f))
+                    cell.setOnClickListener { if (supported) onSend(id) }
+                    // Return true so releasing a long press never also attaches the GIF.
+                    cell.setOnLongClickListener { confirmRemoval(id); true }
+                    cells.addView(cell, LayoutParams(0, dp(100), 1f))
                 }
             }
             repeat(3 - group.size) { cells.addView(TextView(context), LayoutParams(0, 0, 1f)) }
             grid.addView(cells)
         }
-        addView(ScrollView(context).apply { addView(grid) }, LayoutParams(-1, 0, 1f))
+        addView(scroll, LayoutParams(-1, 0, 1f))
+        addView(confirmation, LayoutParams(-1, 0, 1f))
     }
     private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
 }

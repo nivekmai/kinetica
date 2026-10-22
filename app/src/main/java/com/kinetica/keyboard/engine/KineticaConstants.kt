@@ -13,6 +13,8 @@ object KineticaConstants {
     const val GIF_MAX_DIMENSION = 2048
     const val GIF_MAX_FRAMES = 1000
     const val GIF_RECENTS = 30
+    // Used only when a launch has no measured keyboard height yet.
+    const val GIF_SHEET_DEFAULT_DP = 300
     const val GIF_CACHE_BYTES = 200L * 1024 * 1024
     // Receivers can read asynchronously after commitContent acknowledges a handoff.
     const val GIF_CACHE_RETENTION_MS = 24L * 60 * 60 * 1000

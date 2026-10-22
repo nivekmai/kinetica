@@ -21,7 +21,10 @@
         tools:targetApi="33">
 
         <activity android:name=".gif.GifSearchActivity"
-            android:label="@string/gif_search" android:exported="false" />
+            android:label="@string/gif_search" android:exported="false"
+            android:theme="@style/Theme.Kinetica.GifSearch"
+            android:taskAffinity="" android:excludeFromRecents="true"
+            android:windowSoftInputMode="adjustResize" />
         <provider android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.gifs"
             android:exported="false" android:grantUriPermissions="true">

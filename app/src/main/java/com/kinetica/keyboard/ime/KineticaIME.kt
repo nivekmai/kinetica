@@ -991,11 +991,21 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
                     startActivity(Intent(this, GifSearchActivity::class.java)
                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         .putExtra(GifSearchActivity.TARGET_PACKAGE, target.packageName)
-                        .putExtra(GifSearchActivity.TARGET_FIELD, target.fieldId))
+                        .putExtra(GifSearchActivity.TARGET_FIELD, target.fieldId)
+                        .putExtra(GifSearchActivity.SHEET_HEIGHT_DP,
+                            (containerView?.height ?: 0) / resources.displayMetrics.density))
                 }
             },
             onSend = { sendGif(it, connectionAtOpen) },
-            onClear = { store.clearHistory(); GifTransfer.pending = null; openGifs() },
+            onRemove = { id ->
+                if (currentInputConnection === connectionAtOpen) {
+                    val removed = runCatching { store.remove(id) }.isSuccess
+                    if (removed) {
+                        if (GifTransfer.pending?.id == id) GifTransfer.pending = null
+                        openGifs()
+                    } else android.widget.Toast.makeText(this, R.string.gif_remove_error, android.widget.Toast.LENGTH_LONG).show()
+                }
+            },
             onClose = { closeGifs() })
         gifPanel = panel
         containerView?.showNavigation(panel)

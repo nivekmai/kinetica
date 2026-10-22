@@ -525,13 +525,10 @@
     <string name="gif_search">Cerca GIF con Google</string>
     <string name="gif_search_go">Cerca</string>
     <string name="gif_query">Cerca su Google Immagini</string>
-    <string name="gif_clear">Cancella</string>
     <string name="gif_recents">GIF recenti · Tocca per allegare</string>
     <string name="gif_ready">GIF selezionata per prima · Tocca per allegare</string>
     <string name="gif_unsupported">Questo campo non accetta allegati GIF. Puoi comunque cercare.</string>
     <string name="gif_empty">Trova una GIF con Google. Le GIF accettate dalle app di messaggistica appariranno qui per riutilizzarle.</string>
-    <string name="gif_insert">Allega la GIF selezionata</string>
-    <string name="gif_insert_recent">Allega GIF</string>
     <string name="gif_browser_hint">Tocca un risultato, poi tieni premuta l’immagine animata a grandezza intera. Se Google mostra una miniatura, apri il sito di origine e tieni premuta la GIF originale.</string>
     <string name="gif_https_only">Qui si possono aprire solo pagine e immagini HTTPS sicure.</string>
     <string name="gif_browser_error">Impossibile caricare la pagina. Controlla la connessione e riprova con Cerca.</string>
@@ -541,4 +538,8 @@
     <string name="gif_use">Usa questa GIF</string>
     <string name="gif_return_hint">Torna al messaggio, poi tocca la GIF selezionata nella tastiera per allegarla.</string>
     <string name="gif_rejected">Questa app non ha accettato la GIF. Non è stata aggiunta ai recenti.</string>
+    <string name="gif_remove">Rimuovi</string>
+    <string name="gif_remove_confirm">Rimuovere questa GIF dal selettore?</string>
+    <string name="gif_remove_error">Impossibile rimuovere questa GIF. Riprova.</string>
+    <string name="gif_tile_description">GIF %1$d. Tocca per allegare; tieni premuto per rimuovere.</string>
 </resources>
