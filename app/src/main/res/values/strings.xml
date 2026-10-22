@@ -561,4 +561,26 @@
 
     <!-- Voice action: shared by all shortcut pickers. -->
     <string name="voice_title">Voice typing</string>
+
+    <!-- Online Google GIF search. -->
+    <string name="gif_title">GIFs</string>
+    <string name="gif_search">Google GIF search</string>
+    <string name="gif_search_go">Search</string>
+    <string name="gif_query">Search Google Images</string>
+    <string name="gif_clear">Clear</string>
+    <string name="gif_recents">Recent GIFs · Tap to attach</string>
+    <string name="gif_ready">Selected GIF first · Tap to attach</string>
+    <string name="gif_unsupported">This field does not accept GIF attachments. You can still browse.</string>
+    <string name="gif_empty">Find a GIF with Google search. GIFs accepted by a message composer appear here for reuse.</string>
+    <string name="gif_insert">Attach selected GIF</string>
+    <string name="gif_insert_recent">Attach GIF</string>
+    <string name="gif_browser_hint">Tap a result, then hold the full-sized animated image to choose it. If Google shows a thumbnail, open its source website and hold the original GIF.</string>
+    <string name="gif_https_only">Only secure HTTPS pages and images can be opened here.</string>
+    <string name="gif_browser_error">Could not load this page. Check your connection and try Search again.</string>
+    <string name="gif_not_gif">Choose the original animated GIF, not a thumbnail or a page link.</string>
+    <string name="gif_downloading">Downloading and checking GIF…</string>
+    <string name="gif_download_error">Could not download an animated GIF. Open the source website and hold the original GIF, then retry. Maximum size: 15 MB; HTTPS required.</string>
+    <string name="gif_use">Use this GIF</string>
+    <string name="gif_return_hint">Return to your message, then tap the selected GIF in the keyboard to attach it.</string>
+    <string name="gif_rejected">This app did not accept the GIF. Nothing was added to Recents.</string>
 </resources>

@@ -31,6 +31,7 @@ object ActionRow {
         EditorAction.REDO,
         EditorAction.PASTE,
         EditorAction.VOICE_TYPING,
+        EditorAction.GIFS,
         EditorAction.COPY,
         EditorAction.CUT,
         EditorAction.SELECT_ALL,
@@ -78,6 +79,7 @@ object ActionRow {
      */
     fun glyph(action: EditorAction): String = when (action) {
         EditorAction.VOICE_TYPING -> "🎤"
+        EditorAction.GIFS -> "GIF"
         EditorAction.SETTINGS -> "⚙"          // gear, as the ?123 hold already shows
         EditorAction.NEXT_LANGUAGE -> "⇄"     // paired arrows: swap to the next one
         EditorAction.ONE_HANDED -> "◧"        // square half filled: keys to one side
@@ -224,7 +226,7 @@ object ActionRow {
      * call, so the notice and the effect cannot disagree.
      */
     fun notice(action: EditorAction, before: KeyboardState): Notice? = when (action) {
-        EditorAction.SETTINGS, EditorAction.VOICE_TYPING -> null
+        EditorAction.SETTINGS, EditorAction.VOICE_TYPING, EditorAction.GIFS -> null
         EditorAction.TOGGLE_AUTOSPACE -> Notice.Autospace(!before.autospace)
         EditorAction.TOGGLE_NEXT_WORD -> Notice.Toggle(action, !before.nextWord)
         EditorAction.TOGGLE_RECENT_WORDS -> Notice.Toggle(action, !before.recentWords)

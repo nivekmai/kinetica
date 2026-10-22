@@ -1,5 +1,15 @@
 package com.kinetica.keyboard.ime
 
+import com.kinetica.keyboard.gif.GifPanel
+import com.kinetica.keyboard.gif.GifPolicy
+import com.kinetica.keyboard.gif.GifSearchActivity
+import com.kinetica.keyboard.gif.GifStore
+import com.kinetica.keyboard.gif.GifTransfer
+import androidx.core.view.inputmethod.EditorInfoCompat
+import androidx.core.view.inputmethod.InputConnectionCompat
+import androidx.core.view.inputmethod.InputContentInfoCompat
+import androidx.core.content.FileProvider
+import android.content.ClipDescription
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
@@ -200,6 +210,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     private var emojiPicker: EmojiPickerView? = null
     private var navigationPanel: com.kinetica.keyboard.ui.NavigationPanel? = null
     private var navigationBack = false
+    private var gifPanel: GifPanel? = null
     private var voiceSession: com.kinetica.keyboard.voice.VoiceSession? = null
     private var voiceSelection = -1 to -1
     private var currentGeometry: KeyboardGeometry? = null
@@ -717,6 +728,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     // ------------------------------------------------------------------ views
 
     override fun onCreateInputView(): View {
+        closeGifs()
         closeNavigation()
         closeVoiceTyping()
         val bar = SuggestionBarView(this)
@@ -749,18 +761,21 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     }
 
     override fun onFinishInputView(finishingInput: Boolean) {
+        closeGifs()
         closeNavigation()
         closeVoiceTyping()
         super.onFinishInputView(finishingInput)
     }
 
     override fun onWindowHidden() {
+        closeGifs()
         closeNavigation()
         closeVoiceTyping()
         super.onWindowHidden()
     }
 
     private fun openVoiceTyping() {
+        closeGifs()
         closeNavigation()
         if (voiceSession != null) return
         val container = containerView ?: return
@@ -855,6 +870,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     }
 
     private fun openNavigation() {
+        closeGifs()
         if (navigationPanel != null || currentInputConnection == null) return
         val container = containerView ?: return
         closeVoiceTyping()
@@ -891,8 +907,9 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         if (keyCode == KeyEvent.KEYCODE_BACK && navigationBack && event.repeatCount > 0) return true
-        if (keyCode == KeyEvent.KEYCODE_BACK && navigationPanel != null) {
+        if (keyCode == KeyEvent.KEYCODE_BACK && (navigationPanel != null || gifPanel != null)) {
             navigationBack = true
+            closeGifs()
             closeNavigation()
             return true
         }
@@ -908,6 +925,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     }
 
     private fun openEmojiPicker() {
+        closeGifs()
         closeNavigation()
         val container = containerView ?: return
         cancelAutospace()
@@ -920,6 +938,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
                 onEmoji = { recordEmojiUse(it); commitTracked(it) },
                 onBackspace = { onBackspace() },
                 onClose = { closeEmojiPicker() },
+                onGifs = { openGifs() },
             ).also { emojiPicker = it }
         } catch (e: RuntimeException) {
             Log.w(TAG, "emoji picker unavailable", e)
@@ -937,6 +956,69 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
 
     private fun closeEmojiPicker() {
         containerView?.hideEmojiPicker(emojiPicker)
+    }
+
+    private fun closeGifs() {
+        gifPanel?.let { containerView?.hideNavigation(it) }
+        gifPanel = null
+    }
+
+    private fun openGifs() {
+        closeGifs()
+        closeNavigation()
+        closeVoiceTyping()
+        closeEmojiPicker()
+        if (editorState.privateMode) return
+        val connectionAtOpen = currentInputConnection ?: return
+        cancelAutospace()
+        finalizePendingWord()
+        abandonWord()
+        keyboardView?.cancelTouchesForPanel()
+        val info = currentInputEditorInfo ?: return
+        autocorrectUndo = null
+        ctrlPending = false
+        val store = GifStore(this)
+        val pending = GifTransfer.pending?.takeIf {
+            it.packageName == info.packageName && it.fieldId == info.fieldId && store.file(it.id) != null
+        }
+        val panel = GifPanel(this,
+            KeyboardTheme.resolve(this, config.themeMode, config.themeColor, config.themeBrightness),
+            pending?.id, if (editorState.teachesNothing) emptyList() else store.recents(),
+            GifPolicy.acceptsGif(EditorInfoCompat.getContentMimeTypes(info)),
+            onSearch = {
+                val target = currentInputEditorInfo
+                if (target != null && currentInputConnection === connectionAtOpen && !editorState.privateMode) {
+                    startActivity(Intent(this, GifSearchActivity::class.java)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        .putExtra(GifSearchActivity.TARGET_PACKAGE, target.packageName)
+                        .putExtra(GifSearchActivity.TARGET_FIELD, target.fieldId))
+                }
+            },
+            onSend = { sendGif(it, connectionAtOpen) },
+            onClear = { store.clearHistory(); GifTransfer.pending = null; openGifs() },
+            onClose = { closeGifs() })
+        gifPanel = panel
+        containerView?.showNavigation(panel)
+    }
+
+    private fun sendGif(id: String, expectedConnection: android.view.inputmethod.InputConnection) {
+        val connection = currentInputConnection ?: return
+        val info = currentInputEditorInfo ?: return
+        if (!GifPolicy.canAttach(expectedConnection, connection, editorState.privateMode, EditorInfoCompat.getContentMimeTypes(info))) return
+        val store = GifStore(this)
+        val file = store.file(id) ?: return
+        val accepted = runCatching {
+            val uri = FileProvider.getUriForFile(this, "$packageName.gifs", file)
+            InputConnectionCompat.commitContent(connection, info,
+                InputContentInfoCompat(uri, ClipDescription(getString(R.string.gif_title), arrayOf("image/gif")), null),
+                InputConnectionCompat.INPUT_CONTENT_GRANT_READ_URI_PERMISSION, null)
+        }.getOrDefault(false)
+        if (accepted) {
+            store.touch(id)
+            if (!editorState.teachesNothing) runCatching { store.remember(id) }
+            GifTransfer.pending = null
+            closeGifs()
+        } else android.widget.Toast.makeText(this, R.string.gif_rejected, android.widget.Toast.LENGTH_LONG).show()
     }
 
     private fun layoutFor(name: String): KeyboardLayout =
@@ -1101,6 +1183,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     // ------------------------------------------------------------- lifecycle
 
     override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
+        closeGifs()
         navigationBack = false
         closeNavigation()
         closeVoiceTyping()
@@ -1175,9 +1258,14 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         keyboardView?.setShiftUppercase(shift.isShifted)
         closeEmojiPicker()
         applyViewConfig()
+        val pending = GifTransfer.pending
+        if (pending != null && pending.packageName == editorInfo?.packageName && pending.fieldId == editorInfo.fieldId) {
+            openGifs()
+        }
     }
 
     override fun onFinishInput() {
+        closeGifs()
         closeNavigation()
         closeVoiceTyping()
         abandonWord()
@@ -1210,8 +1298,8 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             if (position == voiceSelection || verdict == SelectionLedger.Verdict.OWN) return
             closeVoiceTyping()
         }
-        if (navigationPanel != null) {
-            // Navigation must never reopen a word or schedule autocorrection at each stop.
+        if (navigationPanel != null || gifPanel != null) {
+            // Panel interaction must never reopen a word or schedule autocorrection at each stop.
             abandonWord()
             updateAutoShift()
             return
@@ -2112,7 +2200,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             EditorAction.SELECT_ALL -> android.R.id.selectAll
             EditorAction.UNDO -> android.R.id.undo
             EditorAction.REDO -> android.R.id.redo
-            EditorAction.VOICE_TYPING, EditorAction.RETYPE, EditorAction.EXPANDIFY, EditorAction.SETTINGS,
+            EditorAction.GIFS, EditorAction.VOICE_TYPING, EditorAction.RETYPE, EditorAction.EXPANDIFY, EditorAction.SETTINGS,
             EditorAction.NEXT_LANGUAGE, EditorAction.TOGGLE_AUTOSPACE,
             EditorAction.ONE_HANDED, EditorAction.DATE, EditorAction.TIME,
             EditorAction.ENTER, EditorAction.COPY_LINE, EditorAction.TOGGLE_NEXT_WORD,
@@ -2146,6 +2234,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         when (action) {
             EditorAction.RETYPE -> retypeCurrentWord()
             EditorAction.EXPANDIFY -> expandifyAtCursor()
+            EditorAction.GIFS -> openGifs()
             EditorAction.VOICE_TYPING -> openVoiceTyping()
             EditorAction.SETTINGS -> openSettings()
             EditorAction.NEXT_LANGUAGE -> cycleLanguage()

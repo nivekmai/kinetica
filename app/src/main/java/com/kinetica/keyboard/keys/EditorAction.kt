@@ -57,6 +57,8 @@ enum class EditorAction(val output: String) {
     /** Start on-device dictation. */
     VOICE_TYPING("${ACTION_PREFIX}voice_typing"),
 
+    GIFS("${ACTION_PREFIX}gifs"),
+
     SETTINGS("${ACTION_PREFIX}settings"),
 
     /** Next enabled language, in the canonical cycle order. */

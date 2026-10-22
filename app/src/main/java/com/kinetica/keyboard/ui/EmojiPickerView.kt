@@ -23,6 +23,7 @@ class EmojiPickerView(
     private val onEmoji: (String) -> Unit,
     private val onBackspace: () -> Unit,
     private val onClose: () -> Unit,
+    private val onGifs: () -> Unit = {},
 ) : LinearLayout(context) {
 
     /**
@@ -113,6 +114,8 @@ class EmojiPickerView(
             footerControl(context.getString(R.string.emoji_back_to_letters)) { onClose() },
             LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f),
         )
+        bottom.addView(footerControl(context.getString(R.string.gif_title)) { onGifs() },
+            LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
         bottom.addView(
             footerControl("\u232b") { onBackspace() },
             LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f),

@@ -8,6 +8,18 @@ package com.kinetica.keyboard.engine
  * keyboard heights, and layout modes. Time values are milliseconds.
  */
 object KineticaConstants {
+    // Bound untrusted GIF media and local history without interrupting the typing thread.
+    const val GIF_MAX_BYTES = 15 * 1024 * 1024
+    const val GIF_MAX_DIMENSION = 2048
+    const val GIF_MAX_FRAMES = 1000
+    const val GIF_RECENTS = 30
+    const val GIF_CACHE_BYTES = 200L * 1024 * 1024
+    // Receivers can read asynchronously after commitContent acknowledges a handoff.
+    const val GIF_CACHE_RETENTION_MS = 24L * 60 * 60 * 1000
+    const val GIF_NETWORK_TIMEOUT_MS = 15000
+    // Read timeout alone cannot bound a server that slowly sends an endless body.
+    const val GIF_TOTAL_TIMEOUT_MS = 60000L
+
     // A deliberate upward space swipe opens navigation; horizontal slides keep their route.
     const val NAV_SWIPE_UP_KW = 0.9f
     const val NAV_SWIPE_DOMINANCE = 1.25f

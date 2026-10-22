@@ -12,6 +12,11 @@ this fork's voice features.
 selection and clipboard actions. Tap **ABC · Keyboard** to return. See
 [NAVIGATION.md](NAVIGATION.md) for behavior and phone checks.
 
+**Experimental Google GIF search:** open emoji → **GIFs**, or configure `:gifs`.
+Choose an original GIF in the Google Images browser, then attach it from the
+keyboard. Accepted attachments appear in Recents. This browser flow takes more
+taps than Gboard; see [GIFS.md](GIFS.md) for limitations and phone checks.
+
 [![F-Droid](https://img.shields.io/f-droid/v/com.kinetica.keyboard?logo=fdroid)](https://f-droid.org/packages/com.kinetica.keyboard/)
 [![Latest release](https://img.shields.io/github/v/release/EZ-eta/kinetica?logo=github)](https://github.com/EZ-eta/kinetica/releases/latest)
 [![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue)](LICENSE)
@@ -22,7 +27,7 @@ taps on its own, at the same time as the other, and both streams merge into one 
 successor to the discontinued Nintype (also known as Keyboard69), written from scratch on Android's
 public IME APIs: no fork, no third-party gesture library.
 
-**Local processing.** This voice fork uses Internet only for model downloads requested in setup. Audio and transcripts are not uploaded by the keyboard. Decoding, prediction and learning
+**Local processing.** This voice fork uses Internet for model downloads requested in setup and explicit Google GIF searches/downloads ([GIF guide](GIFS.md)). Audio and transcripts are not uploaded by the keyboard. Decoding, prediction and learning
 run on the device; password and private fields turn off suggestions, trails and learning.
 
 Typing SOMETHING:
@@ -393,7 +398,7 @@ No trademark is registered or asserted; this is a request for clarity, not a leg
 
 If Kinetica is useful to you, you can [buy me a coffee](https://ko-fi.com/ez_eta).
 
-Entirely optional. The app is free and stays free, uses network only for requested model downloads, shows no ads, and
+Entirely optional. The app is free and stays free, uses network for requested model downloads and Google GIF browsing (third-party pages may show ads), and
 never asks for anything.
 
 ## Contributing
