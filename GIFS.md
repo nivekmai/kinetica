@@ -1,4 +1,4 @@
-# Google GIF search (experimental v25)
+# Google GIF search (experimental v26)
 
 Open the emoji picker and tap **GIFs**, or configure **GIFs** in any shortcut picker.
 `:gifs` works in letter/punctuation/Enter alternate lists, like `:paste`.
@@ -9,7 +9,8 @@ Open the emoji picker and tap **GIFs**, or configure **GIFs** in any shortcut pi
    hide, leaving the search sheet at the bottom of the screen.
 2. Tap a result, then hold its full-sized animated image. If the result is a static
    Google thumbnail, visit its source website and hold the original GIF instead.
-3. After download and validation, tap **Use this GIF**. The browser closes and the
+3. After download and validation, the confirmation preview loops the GIF. Tap
+   **Use this GIF**. The browser closes and the
    GIF attaches directly when the original message field regains focus. There is
    no second tap in Recents. The receiving app controls sending the message.
 4. If the field changed, the input did not become ready within 2.5 seconds, or the app refused
@@ -52,8 +53,9 @@ Cookies/site storage belong to this app's WebView, not the user's Chrome login.
 Normal keyboard editor text, audio and voice transcripts are never search inputs.
 
 This is a browser-based first implementation, **not Gboard's integrated results
-panel**. Results animate on Google's/source pages; local previews are static first
-frames. Some results are videos, WebP images, static thumbnails, or sites that block
+panel**. Results animate on Google's/source pages and in the Use this GIF
+confirmation. Recents use static first-frame thumbnails. Some results are videos,
+WebP images, static thumbnails, or sites that block
 direct downloads. These fail with an explicit message; the keyboard never inserts a
 page URL or pretends that a thumbnail is an animated GIF. HTTPS GIF files up to
 15 MiB, 2048 pixels per dimension and 1000 frames are accepted. No conversion is
@@ -423,3 +425,41 @@ v25 artifact and gate:
   Packaged script matches the tested source. Signature matches v24; native LLM and
   unchanged punctuation model remain included. No Android device/emulator test
   was run; the phone's exact Google layout and return lifecycle remain unverified.
+
+### v26 animated confirmation preview
+
+The Use this GIF dialog previously reused `GifThumbnail`, which decodes only the
+first frame. It now uses a dedicated animated preview: Android 9+ uses
+ImageDecoder/AnimatedImageDrawable with infinite repeat and a maximum decoded
+dimension of 640 pixels; Android 8/8.1 uses a software-canvas Movie fallback.
+Only the preview is resized; the original file is attached unchanged.
+
+Decoding runs on a worker. Playback starts after the drawable is installed in a
+visible, focused window, pauses when hidden/unfocused, and stops/releases the
+view's reference on dismissal. A generation check prevents a decode finishing
+after Cancel, Use this GIF, or reattachment from reviving an old preview. Failure
+shows a short notice instead of silently displaying a still frame. Recents remain
+lightweight first-frame thumbnails.
+
+Phone checks (native rendering is not exercised by JVM tests):
+1. Choose an animated GIF: the confirmation must animate without another tap and
+   continue looping, including a source GIF that specifies a finite loop count.
+2. Cancel and choose a different GIF quickly: the first GIF must not replace it.
+3. Open Home/Recents or lock the phone with the dialog open; return: playback
+   resumes. Cancel or Use this GIF: the preview must stop as the dialog closes.
+4. Use this GIF still attaches the original animation to the original composer.
+5. Check a tall and a wide GIF, folded/unfolded; buttons must remain reachable.
+   On Android 8/8.1, repeat the playback and dismissal checks for the fallback.
+
+v26 artifact and gate:
+- Package `com.kinetica.keyboard.dev`, version `2.0.25-voice-dev`, code 99.
+- `kinetica-dev-v26-animated-gif-preview-arm64.apk`, 53,320,968 bytes.
+- SHA-256: `55bcfd85e380a210e300002c3ba817b71c607e1c9d10685b65f1c5c62494678a`.
+- `-PvoiceLlm=true -PvoicePunctuation=true assembleDebug test lint --max-workers=4`
+  passed in 4m 8s. Debug/release each report 1,231 tests, zero failures/errors,
+  two existing skips. Lint reports zero errors. Six new preview-session tests
+  cover autoplay, hidden-load/resume, dismissal, late decode cancellation,
+  out-of-order replacement and decode failure. Native frame rendering and dialog
+  sizing still require the phone checks above; no emulator/device test was run.
+- Signature matches v25. The new preview class, native LLM and unchanged
+  punctuation model are packaged.

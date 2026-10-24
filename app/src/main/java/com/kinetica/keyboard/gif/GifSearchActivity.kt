@@ -252,7 +252,9 @@ class GifSearchActivity : Activity() {
                     dialog?.dismiss()
                     dialog = AlertDialog.Builder(this)
                         .setTitle(R.string.gif_use)
-                        .setView(GifThumbnail(this, file).apply { minimumHeight = (200 * resources.displayMetrics.density).toInt() })
+                        .setView(GifPreview(this, file).apply {
+                            minimumHeight = (KineticaConstants.GIF_PREVIEW_HEIGHT_DP * resources.displayMetrics.density).toInt()
+                        })
                         .setMessage(R.string.gif_return_hint)
                         .setPositiveButton(R.string.gif_use) { _, _ ->
                             if (GifTransfer.confirmSearch(intent.getStringExtra(SEARCH_TOKEN), id,
