@@ -542,6 +542,7 @@
     <string name="gif_attach_retry">Impossibile allegare automaticamente. Apri GIF per riprovare. Per un rapporto, apri Cerca → ? → Copia diagnostica.</string>
     <string name="gif_copy_diagnostics">Copia diagnostica</string>
     <string name="gif_diagnostics_copied">Diagnostica GIF copiata. Incollala nella segnalazione del problema.</string>
+    <string name="gif_preview_error">Impossibile riprodurre l’anteprima di questa GIF.</string>
     <string name="gif_search_expired">Questa sessione di ricerca è terminata. Riapri la ricerca GIF dal messaggio.</string>
     <string name="gif_rejected">Questa app non ha accettato la GIF. Non è stata aggiunta ai recenti.</string>
     <string name="gif_remove">Rimuovi</string>

@@ -584,6 +584,7 @@
     <string name="gif_attach_retry">Could not attach automatically. Open GIFs to retry. For a report, open Search → ? → Copy diagnostics.</string>
     <string name="gif_copy_diagnostics">Copy diagnostics</string>
     <string name="gif_diagnostics_copied">GIF diagnostics copied. Paste them into your bug report.</string>
+    <string name="gif_preview_error">Could not play this GIF preview.</string>
     <string name="gif_search_expired">This search session has ended. Open GIF search again from your message.</string>
     <string name="gif_rejected">This app did not accept the GIF. Nothing was added to Recents.</string>
     <string name="gif_remove">Remove</string>

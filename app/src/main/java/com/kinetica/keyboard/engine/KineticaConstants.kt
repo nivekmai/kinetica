@@ -42,6 +42,12 @@ object KineticaConstants {
     /** Bound the optional diagnostic report; decisions stay in memory until copied. */
     const val GIF_DEBUG_EVENTS = 80
     const val GIF_DEBUG_REPORT_CHARS = 32000
+    /** Bound the modern animated preview's decoded canvas; the original attachment stays intact. */
+    const val GIF_PREVIEW_DECODE_PX = 640
+    const val GIF_PREVIEW_HEIGHT_DP = 200
+    /** Android 8 Movie fallback refresh interval and missing-duration default. */
+    const val GIF_PREVIEW_FRAME_MS = 16L
+    const val GIF_PREVIEW_FALLBACK_DURATION_MS = 1000
     // Bound the memory-only editor snapshot used to reject a changed return destination.
     const val GIF_EDITOR_CONTEXT_CHARS = 128
 
