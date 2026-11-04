@@ -95,6 +95,7 @@ object SettingsSynonyms {
             "language", "languages", "mix", "follow", "multilingual", "bilingual", "primary", "equal", "detect", "switch",
         ),
         Prefs.TYPING_SPEED to listOf("wpm", "speed", "words per minute", "typing speed", "fast"),
+        "pref_typing_history" to listOf("wpm", "statistics", "history", "average", "maximum", "speed", "stats"),
         Prefs.ENTER_ACTION to listOf("enter", "return", "search", "send", "go", "newline", "action"),
         Prefs.ENTER_HOLD_SENDS to listOf("enter", "return", "send", "hold", "newline", "chat", "action"),
         Prefs.FIELD_KEYS to listOf("email", "url", "address", "at", "@", "comma", "field", "web"),

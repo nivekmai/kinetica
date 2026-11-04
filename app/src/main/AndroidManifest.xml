@@ -28,6 +28,9 @@
         android:localeConfig="@xml/locales_config"
         tools:targetApi="33">
 
+        <activity android:name=".settings.TypingStatsActivity"
+            android:label="@string/typing_stats_title" android:exported="false" />
+
         <activity android:name=".gif.GifSearchActivity"
             android:label="@string/gif_search" android:exported="false"
             android:theme="@style/Theme.Kinetica.GifSearch"

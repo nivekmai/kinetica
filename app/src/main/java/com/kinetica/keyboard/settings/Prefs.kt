@@ -508,6 +508,7 @@ object Prefs {
     /** A space typed on a symbol page goes back to the letters. */
     const val LETTERS_AFTER_SPACE = "pref_letters_after_space"
     const val TYPING_SPEED = "pref_typing_speed"
+    const val TYPING_HISTORY = "pref_typing_history_enabled"
 
     /**
      * Which languages suggest: one, mix (the active language leads) or follow (no primary).

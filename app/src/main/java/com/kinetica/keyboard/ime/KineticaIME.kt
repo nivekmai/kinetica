@@ -8,6 +8,7 @@ import com.kinetica.keyboard.gif.GifSearchActivity
 import com.kinetica.keyboard.gif.GifStore
 import com.kinetica.keyboard.gif.GifTransfer
 import com.kinetica.keyboard.gif.GifDebug
+import com.kinetica.keyboard.settings.TypingStatsStore
 import androidx.core.view.inputmethod.EditorInfoCompat
 import androidx.core.view.inputmethod.InputConnectionCompat
 import androidx.core.view.inputmethod.InputContentInfoCompat
@@ -90,6 +91,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
 
     internal val mainHandler = Handler(Looper.getMainLooper())
 
+    internal val typingHistory = TypingHistory()
     private val mainExecutor = Executor { mainHandler.post(it) }
     private val decodeExecutor = Executors.newSingleThreadExecutor { r ->
         Thread(r, "kinetica-decode").apply { priority = Thread.NORM_PRIORITY + 1 }
@@ -206,7 +208,8 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         ColorPrefs.migrate(prefs)
         OrientationPrefs.migrate(prefs)
         config = readConfig(prefs)
-        val listener = SharedPreferences.OnSharedPreferenceChangeListener { p, _ ->
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { p, key ->
+            if (key == Prefs.TYPING_HISTORY) typingHistory.reset()
             val previous = config
             config = readConfig(p)
             // What decides the automatic space, whenever any of it changes and from wherever.
@@ -382,6 +385,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     }
 
     override fun onFinishInputView(finishingInput: Boolean) {
+        typingHistory.reset()
         closeGifs()
         closeNavigation()
         closeVoiceTyping()
@@ -389,6 +393,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     }
 
     override fun onWindowHidden() {
+        typingHistory.reset()
         closeGifs()
         closeNavigation()
         closeVoiceTyping()
@@ -733,6 +738,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         composer?.reset()
         barContents.recentWords.clear()
         commit.clearTypingSpeed()
+        typingHistory.reset()
         selectionLedger.clear()
         commitHistory.clear()
         forgetCommitMarks()
@@ -793,6 +799,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     }
 
     override fun onFinishInput() {
+        typingHistory.reset()
         closeGifs()
         closeNavigation()
         closeVoiceTyping()
@@ -920,6 +927,10 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         // A new gesture starts a new word; a kept bar belongs to the one before it.
         wordState.keptBar = null
         commit.noteTouch(token)
+        if (!editorState.teachesNothing && TypingStatsStore.enabled(this) &&
+            (!config.peckMode || token is TapToken)) {
+            typingHistory.touch(token.tStart, token.tEnd)
+        } else typingHistory.reset()
         // Peck-type mode: pure literal insertion. Taps commit their letter
         // (shift-aware) and never feed the composer, so there is no pending
         // word, no suggestions, no autocorrect, and no learning; swipes are
@@ -928,6 +939,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             if (token is TapToken) {
                 val ch = shift.apply(boardAlphabet.charOf(token.code))
                 commitTracked(ch.toString())
+                recordTypingHistory(1)
                 if (shift.state == ShiftState.State.SHIFT) {
                     shift.onLetterCommitted()
                     keyboardView?.setShiftUppercase(shift.isShifted)
@@ -1532,6 +1544,15 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     /** Weights for the composer with no primary language, or null for the pairwise merge. */
     private fun equalWeights(): Map<String, Float>? =
         if (config.languageMode == LanguageMode.FOLLOW && residents.secondaryPredictor != null) momentum.weightsFor(residentLanguages()) else null
+
+    internal fun recordTypingHistory(chars: Int) {
+        if (editorState.teachesNothing || !TypingStatsStore.enabled(this)) {
+            typingHistory.reset()
+            return
+        }
+        typingHistory.commit(chars)?.let { TypingStatsStore.add(this, it) }
+    }
+
 
     // ---------------------------------------------------------- word state
 

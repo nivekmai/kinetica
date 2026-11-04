@@ -218,6 +218,7 @@ internal class CommitPath(private val ime: KineticaIME) {
     }
 
     fun abandonWord() {
+        ime.typingHistory.discardWord()
         ime.wordState.keptBar = null
         ime.wordState.midWordOffer = null
         ime.wordState.midWordHistory = null
@@ -398,6 +399,7 @@ internal class CommitPath(private val ime: KineticaIME) {
     private fun recordTypingSpeed(word: String) {
         val start = wordStartMs
         wordStartMs = -1L
+        if (start >= 0 && word.isNotEmpty()) ime.recordTypingHistory(word.codePointCount(0, word.length) + 1)
         if (!ime.config.typingSpeed || ime.editorState.privateMode || start < 0 || word.isEmpty()) return
         val wpm = typingSpeed.logWord(start, wordEndMs, word.length)
         DecodeTrace.log { "  wpm display=${wpm?.let { "%.1f".format(it) }} rate=${typingSpeed.rate()?.let { "%.1f".format(it) }} letters=${word.length}" }
