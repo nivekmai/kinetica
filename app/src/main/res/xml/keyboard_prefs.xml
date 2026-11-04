@@ -63,6 +63,14 @@
         app:singleLineTitle="false"
         android:summary="@string/pref_group_typing_summary">
         <Preference
+            android:key="pref_typing_history"
+            android:title="@string/typing_stats_title"
+            app:singleLineTitle="false"
+            android:summary="@string/typing_stats_summary">
+            <intent android:targetPackage="@string/app_pkg"
+                android:targetClass="com.kinetica.keyboard.settings.TypingStatsActivity" />
+        </Preference>
+        <Preference
             android:key="pref_voice_setup"
             android:title="@string/voice_title"
             app:singleLineTitle="false"

@@ -65,6 +65,7 @@ object SettingsSynonyms {
         Prefs.EDIT_FROM_MENU to listOf("long press", "long-press", "menu", "edit", "alternates", "accents"),
         Prefs.NO_PRIMARY to listOf("language", "languages", "mix", "multilingual", "primary", "equal", "detect"),
         Prefs.TYPING_SPEED to listOf("wpm", "speed", "words per minute", "typing speed", "fast"),
+        "pref_typing_history" to listOf("wpm", "statistics", "history", "average", "maximum", "speed", "stats"),
         Prefs.ENTER_ACTION to listOf("enter", "return", "search", "send", "go", "newline", "action"),
         Prefs.TIDY_SPACES to listOf("space", "spaces", "double space", "compress", "quote", "autospace"),
         Prefs.NUMBER_ROW to listOf("digits", "numbers", "number row", "numeric", "1234"),

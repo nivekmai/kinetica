@@ -307,6 +307,7 @@ object Prefs {
     const val TIDY_SPACES = "pref_tidy_spaces"
     const val ENTER_ACTION = "pref_enter_action"
     const val TYPING_SPEED = "pref_typing_speed"
+    const val TYPING_HISTORY = "pref_typing_history_enabled"
     const val NO_PRIMARY = "pref_no_primary"
 
     /** Holding a letter's long-press menu still opens that letter's list in settings (#8). */

@@ -6,6 +6,7 @@ import com.kinetica.keyboard.gif.GifSearchActivity
 import com.kinetica.keyboard.gif.GifStore
 import com.kinetica.keyboard.gif.GifTransfer
 import com.kinetica.keyboard.gif.GifDebug
+import com.kinetica.keyboard.settings.TypingStatsStore
 import androidx.core.view.inputmethod.EditorInfoCompat
 import androidx.core.view.inputmethod.InputConnectionCompat
 import androidx.core.view.inputmethod.InputContentInfoCompat
@@ -106,6 +107,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
 
     /** The spacebar's words per minute (TypingSpeed), and the touch span of the word in hand. */
     private val typingSpeed = TypingSpeed()
+    private val typingHistory = TypingHistory()
     private var wordStartMs = -1L
     private var wordEndMs = -1L
     private val speedHideRunnable = Runnable { keyboardView?.speedLabel = null }
@@ -417,7 +419,8 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         vibrator = getSystemService(VIBRATOR_SERVICE) as? Vibrator
         val prefs = PreferenceManager.getDefaultSharedPreferences(this)
         config = KeyboardConfig.from(prefs)
-        val listener = SharedPreferences.OnSharedPreferenceChangeListener { p, _ ->
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { p, key ->
+            if (key == Prefs.TYPING_HISTORY) typingHistory.reset()
             val previous = config
             config = KeyboardConfig.from(p)
             // What decides the automatic space, whenever any of it changes and from wherever.
@@ -765,6 +768,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     }
 
     override fun onFinishInputView(finishingInput: Boolean) {
+        typingHistory.reset()
         closeGifs()
         closeNavigation()
         closeVoiceTyping()
@@ -772,6 +776,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     }
 
     override fun onWindowHidden() {
+        typingHistory.reset()
         closeGifs()
         closeNavigation()
         closeVoiceTyping()
@@ -1280,6 +1285,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         composer?.reset()
         recentWords.clear()
         typingSpeed.clear()
+        typingHistory.reset()
         mainHandler.removeCallbacks(speedHideRunnable)
         keyboardView?.speedLabel = null
         selectionLedger.clear()
@@ -1345,6 +1351,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     }
 
     override fun onFinishInput() {
+        typingHistory.reset()
         closeGifs()
         closeNavigation()
         closeVoiceTyping()
@@ -1454,6 +1461,10 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         keptBar = null
         if (wordStartMs < 0) wordStartMs = token.tStart
         wordEndMs = token.tEnd
+        if (!editorState.teachesNothing && TypingStatsStore.enabled(this) &&
+            (!config.peckMode || token is TapToken)) {
+            typingHistory.touch(token.tStart, token.tEnd)
+        } else typingHistory.reset()
         // Peck-type mode: pure literal insertion. Taps commit their letter
         // (shift-aware) and never feed the composer, so there is no pending
         // word, no suggestions, no autocorrect, and no learning; swipes are
@@ -1462,6 +1473,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             if (token is TapToken) {
                 val ch = shift.apply(boardAlphabet.charOf(token.code))
                 commitTracked(ch.toString())
+                recordTypingHistory(1)
                 if (shift.state == ShiftState.State.SHIFT) {
                     shift.onLetterCommitted()
                     keyboardView?.setShiftUppercase(shift.isShifted)
@@ -3391,6 +3403,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     private fun recordTypingSpeed(word: String) {
         val start = wordStartMs
         wordStartMs = -1L
+        if (start >= 0 && word.isNotEmpty()) recordTypingHistory(word.codePointCount(0, word.length) + 1)
         if (!config.typingSpeed || editorState.privateMode || start < 0 || word.isEmpty()) return
         val wpm = typingSpeed.logWord(start, wordEndMs, word.length)
         DecodeTrace.log { "  wpm display=${wpm?.let { "%.1f".format(it) }} rate=${typingSpeed.rate()?.let { "%.1f".format(it) }} letters=${word.length}" }
@@ -3398,6 +3411,14 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         kv.speedLabel = wpm?.let { getString(R.string.typing_speed_label, it.roundToInt()) }
         mainHandler.removeCallbacks(speedHideRunnable)
         mainHandler.postDelayed(speedHideRunnable, TypingSpeed.IDLE_BREAK_MS)
+    }
+
+    private fun recordTypingHistory(chars: Int) {
+        if (editorState.teachesNothing || !TypingStatsStore.enabled(this)) {
+            typingHistory.reset()
+            return
+        }
+        typingHistory.commit(chars)?.let { TypingStatsStore.add(this, it) }
     }
 
     private fun enterLabelText(label: EnterBehavior.Label): String = when (label) {
@@ -4040,6 +4061,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     }
 
     private fun abandonWord() {
+        typingHistory.discardWord()
         keptBar = null
         midWordOffer = null
         midWordHistory = null

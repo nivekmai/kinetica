@@ -8,6 +8,9 @@ package com.kinetica.keyboard.engine
  * keyboard heights, and layout modes. Time values are milliseconds.
  */
 object KineticaConstants {
+    /** A sustained peak needs enough active typing to avoid a single fast swipe dominating. */
+    const val TYPING_STATS_PEAK_MIN_MS = 10000L
+    const val TYPING_STATS_PEAK_MIN_CHARS = 25L
     // Bound untrusted GIF media and local history without interrupting the typing thread.
     const val GIF_MAX_BYTES = 15 * 1024 * 1024
     const val GIF_MAX_DIMENSION = 2048

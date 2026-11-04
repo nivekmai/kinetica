@@ -12,6 +12,11 @@ this fork's voice features.
 selection and clipboard actions. Tap **ABC · Keyboard** to return. See
 [NAVIGATION.md](NAVIGATION.md) for behavior and phone checks.
 
+**Typing statistics:** Settings → Typing → Typing statistics shows historical WPM,
+sustained peak, active typing time, daily averages and time-of-day comparisons.
+Counts stay on the device; collection is independent of the live spacebar meter.
+See [TYPING_STATS.md](TYPING_STATS.md) for the measurement rules and phone checks.
+
 **Experimental Google GIF search:** open emoji → **GIFs**, or configure `:gifs`.
 Choose an original GIF in the Google Images browser and tap **Use this GIF** to
 attach it directly on return to your message. Accepted attachments appear in Recents. This browser flow takes more
