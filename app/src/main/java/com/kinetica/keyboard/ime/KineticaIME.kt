@@ -20,6 +20,7 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.content.res.Configuration
 import android.inputmethodservice.InputMethodService
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -401,6 +402,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     }
 
     internal fun openVoiceTyping() {
+        emojiSearch.close("openVoiceTyping")
         closeGifs()
         closeNavigation()
         if (voiceSession != null) return
@@ -415,6 +417,8 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         commit.finalizePendingWord()
         commit.abandonWord()
         views.closeEmojiPicker()
+        commands.setSelecting(false)
+        forgetCommitMarks()
         val connection = currentInputConnection ?: return
         voiceSelection = if (selectionLength() > 0) selStart to selEnd else cursorExpected() to cursorExpected()
         val initialStart = voiceSelection.first
@@ -487,7 +491,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         voiceSession?.start()
     }
 
-    private fun closeVoiceTyping() {
+    internal fun closeVoiceTyping() {
         val session = voiceSession ?: return
         voiceSession = null
         session.destroy()
@@ -496,6 +500,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     }
 
     private fun openNavigation() {
+        emojiSearch.close("openNavigation")
         closeGifs()
         if (navigationPanel != null || currentInputConnection == null) return
         val container = containerView ?: return
@@ -507,6 +512,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         commit.abandonWord()
         backspace.autocorrectUndo = null
         commands.ctrlPending = false
+        commands.setSelecting(false)
         val panel = com.kinetica.keyboard.ui.NavigationPanel(this,
             onMove = { move, selecting ->
                 views.vibrateForKeyPress()
@@ -556,6 +562,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     }
 
     internal fun openGifs() {
+        emojiSearch.close("openGifs")
         closeGifs()
         closeNavigation()
         closeVoiceTyping()
@@ -1511,6 +1518,9 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
 
     /** The editing page, or back to the letters when it is up: one action opens and closes it. */
     internal fun toggleEditPage() {
+        closeGifs()
+        closeNavigation()
+        closeVoiceTyping()
         if (keyboardView?.shownBoard == EditPage.NAME) {
             keyboardView?.setKeyboardLayout(views.alphaLayout())
             return

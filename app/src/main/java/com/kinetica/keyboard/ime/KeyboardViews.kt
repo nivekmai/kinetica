@@ -79,6 +79,7 @@ internal class KeyboardViews(private val ime: KineticaIME) {
     fun editPageLayout(): KeyboardLayout = ime.config.editPage.layout()
 
     fun openEmojiPicker() {
+        ime.closeVoiceTyping()
         ime.closeGifs()
         ime.closeNavigation()
         val container = ime.containerView ?: return

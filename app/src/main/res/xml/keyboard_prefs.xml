@@ -62,7 +62,7 @@
 
         <PreferenceScreen
             android:key="pref_group_typing"
-            app:initialExpandedChildrenCount="5"
+            app:initialExpandedChildrenCount="7"
             android:icon="@drawable/ic_settings_typing"
             android:title="@string/pref_group_typing_title"
             app:singleLineTitle="false"

@@ -721,7 +721,7 @@
 
     <string name="pref_enter_alternates_title">Enter slide-up symbols</string>
     <!-- The symbols in quotes are the stored default: keep them. -->
-    <string name="pref_enter_alternates_summary">Up to three symbols, space-separated (default \"? ! ,\"). The first sits above Enter and is inserted by a quick up-slide; slide left for the others Actions such as :voice_typing and :paste also work.</string>
+    <string name="pref_enter_alternates_summary">Up to three symbols, space-separated (default \"? ! ,\"). The first sits above Enter and is inserted by a quick up-slide; slide left for the others. Actions such as :voice_typing and :paste also work.</string>
     <string name="pref_enter_alternates_default" translatable="false">\? ! ,</string>
 
     <string name="pref_apostrophe_key_title">Apostrophe key</string>

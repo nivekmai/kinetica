@@ -1,6 +1,7 @@
 # Kinetica
 
 Voice-typing development fork of [EZ-eta/kinetica](https://github.com/EZ-eta/kinetica).
+Rebased onto **3.0.1**; see [integration and upgrade notes](UPSTREAM_REBASE.md).
 The current experiment combines Android on-device speech recognition with a small
 local punctuation/casing model. Try **Small local model** with **AI cleanup off**;
 the heavier LLM is optional. See [the short architecture and reuse guide](VOICE_QUICKSTART.md)

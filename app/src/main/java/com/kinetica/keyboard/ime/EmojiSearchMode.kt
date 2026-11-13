@@ -48,6 +48,10 @@ internal class EmojiSearchMode(private val ime: KineticaIME) {
     }
 
     fun open(src: String) {
+        ime.closeGifs()
+        ime.closeNavigation()
+        ime.closeVoiceTyping()
+        ime.typingHistory.reset()
         if (active) return
         val container = ime.containerView ?: return
         ime.views.closeEmojiPicker()

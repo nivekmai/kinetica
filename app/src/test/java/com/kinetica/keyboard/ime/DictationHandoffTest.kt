@@ -93,11 +93,12 @@ class DictationHandoffTest {
     }
 
     @Test
-    fun theManifestCanSeeInputMethodsAndStillCannotRecord() {
+    fun theManifestSupportsExternalHandoffAndLocalForkDictation() {
         val manifest = read("app/src/main/AndroidManifest.xml")
         assertTrue(Regex("<queries>\\s*<intent>\\s*<action android:name=\"android.view.InputMethod\" />").containsMatchIn(manifest))
-        assertFalse(manifest.contains("RECORD_AUDIO"))
-        assertFalse(manifest.contains("android.permission.INTERNET"))
+        assertTrue(manifest.contains("RECORD_AUDIO"))
+        // This fork also supports local recording and explicit GIF/model downloads.
+        assertTrue(manifest.contains("android.permission.INTERNET"))
     }
 
     private fun read(rel: String): String {

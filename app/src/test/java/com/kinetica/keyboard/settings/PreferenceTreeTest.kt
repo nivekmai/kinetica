@@ -309,7 +309,7 @@ class PreferenceTreeTest {
             assertTrue("$screen shows everything, no Advanced row", rows.count { it !in nested } > count)
         }
         val basics = mapOf(
-            "pref_group_typing" to listOf(Prefs.AUTOCORRECT_LEVEL, "pref_group_spacing", "pref_next_word", "pref_group_learning", Prefs.VIBRATION),
+            "pref_group_typing" to listOf("pref_typing_history", "pref_voice_setup", Prefs.AUTOCORRECT_LEVEL, "pref_group_spacing", "pref_next_word", "pref_group_learning", Prefs.VIBRATION),
             "pref_group_bar" to listOf("pref_bar_preview", Prefs.SUGGESTION_BAR_DP, "pref_recent_words", "pref_bar_actions"),
             "pref_group_keys" to listOf("pref_number_row", "pref_group_longpress", "pref_comma_mode", "pref_comma_custom", "pref_period_mode", "pref_period_custom"),
         )
